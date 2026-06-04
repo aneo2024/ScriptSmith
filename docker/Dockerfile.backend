@@ -1,0 +1,22 @@
+# 后端 Dockerfile — 多阶段构建
+FROM golang:1.24-alpine AS build
+
+WORKDIR /app
+
+# 安装 CGO 依赖（modernc.org/sqlite 纯 Go，无需 CGO）
+ENV CGO_ENABLED=0
+
+COPY backend/go.mod backend/go.sum ./
+RUN go mod download
+
+COPY backend/ ./
+RUN go build -o /server ./cmd/server
+
+# 生产 — 轻量运行时
+FROM alpine:3.21
+
+WORKDIR /app
+COPY --from=build /server .
+
+EXPOSE 8080
+CMD ["./server"]
