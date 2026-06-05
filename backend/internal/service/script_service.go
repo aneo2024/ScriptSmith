@@ -300,13 +300,6 @@ func (s *ScriptService) scriptToYAML(script *model.Script) (string, error) {
 	}
 
 	// 构建 YAML 文档结构
-	type sceneYAML struct {
-		Sequence int              `yaml:"sequence"`
-		Title    string           `yaml:"title"`
-		Slugline sluglineYAML     `yaml:"slugline"`
-		Content  []contentLineYAML `yaml:"content"`
-	}
-
 	type sluglineYAML struct {
 		Type string `yaml:"type"`
 		Name string `yaml:"name"`
@@ -322,6 +315,13 @@ func (s *ScriptService) scriptToYAML(script *model.Script) (string, error) {
 		TransitionType  string `yaml:"transition_type,omitempty"`
 		SoundType       string `yaml:"sound_type,omitempty"`
 		SoundDesc       string `yaml:"sound_description,omitempty"`
+	}
+
+	type sceneYAML struct {
+		Sequence int              `yaml:"sequence"`
+		Title    string           `yaml:"title"`
+		Slugline sluglineYAML     `yaml:"slugline"`
+		Content  []contentLineYAML `yaml:"content"`
 	}
 
 	doc := map[string]interface{}{

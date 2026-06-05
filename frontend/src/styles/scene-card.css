@@ -105,3 +105,36 @@
   font-weight: bold;
   color: #1890ff;
 }
+
+/* 编辑模式 */
+.content-block.editing {
+  background: #fafafa;
+  border: 1px dashed #1890ff;
+  padding: 8px;
+}
+
+.edit-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+  padding: 4px;
+}
+
+.name-input {
+  font-weight: bold;
+  text-transform: uppercase;
+  text-align: center;
+  font-size: 14px;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+}
+
+.dialogue-edit {
+  text-align: left;
+  min-height: 60px;
+}
