@@ -78,6 +78,7 @@ func main() {
 			auth.GET("/script/:id/scenes", h.GetScenes)
 
 			// 结构化剧本 CRUD
+			auth.GET("/scripts/by-task/:taskID", h.GetScriptByTaskID)
 			auth.GET("/scripts/:scriptID", h.GetStructuredScript)
 			auth.PUT("/scripts/:scriptID/scenes/:sceneID", h.UpdateScene)
 			auth.PUT("/scripts/:scriptID/contents/:contentID", h.UpdateContent)

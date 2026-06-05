@@ -31,6 +31,15 @@ const useScriptStore = create((set, get) => ({
   selectContent: (contentId) => {
     set({ selectedContentId: contentId });
   },
+
+  setScript: (script) => {
+    set({
+      script,
+      selectedSceneId: null,
+      selectedContentId: null,
+      isLoading: false,
+    });
+  },
 }));
 
 export default useScriptStore;

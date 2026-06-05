@@ -137,6 +137,18 @@ func (h *ScriptHandler) GetStructuredScript(c *gin.Context) {
 	c.JSON(http.StatusOK, script)
 }
 
+// GetScriptByTaskID 按任务 ID 获取关联的结构化剧本
+// GET /v1/scripts/by-task/:taskID
+func (h *ScriptHandler) GetScriptByTaskID(c *gin.Context) {
+	taskID := c.Param("taskID")
+	script, err := h.svc.GetScriptByTaskID(taskID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, script)
+}
+
 // UpdateScene 更新剧本中的某个场景
 // PUT /v1/scripts/:scriptID/scenes/:sceneID
 func (h *ScriptHandler) UpdateScene(c *gin.Context) {

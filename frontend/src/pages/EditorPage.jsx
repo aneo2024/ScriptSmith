@@ -4,6 +4,7 @@ import { Spin, Button, Typography } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import SceneNav from '../components/SceneNav';
 import useScriptStore from '../store/scriptStore';
+import { getScriptByTaskId } from '../services/api';
 import '../styles/script-editor.css';
 
 const { Title, Text } = Typography;
@@ -129,16 +130,24 @@ export default function EditorPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const scriptId = searchParams.get('scriptId');
+  const taskId = searchParams.get('taskId');
 
   const isLoading = useScriptStore((s) => s.isLoading);
   const loadScript = useScriptStore((s) => s.loadScript);
+  const setScript = useScriptStore((s) => s.setScript);
   const script = useScriptStore((s) => s.script);
 
   useEffect(() => {
     if (scriptId) {
       loadScript(scriptId);
+    } else if (taskId) {
+      getScriptByTaskId(taskId)
+        .then((data) => setScript(data))
+        .catch((err) => console.error('通过任务ID加载剧本失败:', err));
     }
-  }, [scriptId]);
+  }, [scriptId, taskId]);
+
+  const hasParam = scriptId || taskId;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
@@ -167,8 +176,8 @@ export default function EditorPage() {
             <Text type="secondary">— {script.metadata.title}</Text>
           )}
         </div>
-        {!scriptId && (
-          <Text type="warning">请通过 scriptId 参数打开剧本</Text>
+        {!hasParam && (
+          <Text type="warning">请通过 scriptId 或 taskId 参数打开剧本</Text>
         )}
       </div>
 

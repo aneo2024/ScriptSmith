@@ -43,3 +43,11 @@ export const getTaskStatus = (taskId) =>
 /** 获取转换完成的 YAML 剧本（纯文本） */
 export const getScript = (taskId) =>
   api.get(`/script/${taskId}`).then((r) => r.data);
+
+/** 获取结构化剧本（按 scriptId） */
+export const getStructuredScript = (scriptId) =>
+  api.get(`/scripts/${scriptId}`).then((r) => r.data);
+
+/** 按 taskId 获取关联的结构化剧本 */
+export const getScriptByTaskId = (taskId) =>
+  api.get(`/scripts/by-task/${taskId}`).then((r) => r.data);
