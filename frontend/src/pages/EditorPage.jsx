@@ -1,149 +1,188 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Typography, Button, Space, Alert, message, Tabs } from 'antd';
-import { ExportOutlined, ArrowLeftOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
-import CodeMirror from '@uiw/react-codemirror';
-import { yaml as yamlLang } from '@codemirror/lang-yaml';
-import { oneDark } from '@codemirror/theme-one-dark';
-import { useTask } from '../hooks/useTask';
-import { saveEditorDraft, loadEditorDraft } from '../hooks/useRecentTasks';
-import ScriptPreview from '../components/ScriptPreview';
+import { Spin, Button, Typography } from 'antd';
+import { ArrowLeftOutlined } from '@ant-design/icons';
+import SceneNav from '../components/SceneNav';
+import useScriptStore from '../store/scriptStore';
+import '../styles/script-editor.css';
 
 const { Title, Text } = Typography;
+
+/** 渲染单个内容块 */
+function ContentItem({ item }) {
+  switch (item.type) {
+    case 'action':
+      return (
+        <div className="script-editor__canvas-content-item script-editor__canvas-content-item--action">
+          <span className="tag">动作</span>
+          {item.description}
+        </div>
+      );
+    case 'dialogue':
+      return (
+        <div className="script-editor__canvas-content-item script-editor__canvas-content-item--dialogue">
+          <span className="tag">对话</span>
+          <strong>{item.character_name || item.character_id}</strong>
+          {item.emotion && <span style={{ color: '#888', marginLeft: 6 }}>({item.emotion})</span>}
+          {item.parenthetical && (
+            <div style={{ color: '#888', fontStyle: 'italic', marginBottom: 4 }}>
+              ({item.parenthetical})
+            </div>
+          )}
+          <div style={{ marginTop: 4 }}>{item.text}</div>
+        </div>
+      );
+    case 'transition':
+      return (
+        <div className="script-editor__canvas-content-item" style={{ textAlign: 'right', borderLeftColor: '#faad14' }}>
+          <span className="tag">转场</span>
+          {item.transition_type}
+        </div>
+      );
+    case 'sound':
+      return (
+        <div className="script-editor__canvas-content-item" style={{ borderLeftColor: '#722ed1' }}>
+          <span className="tag">音效</span>
+          <strong>{item.sound_type}</strong>
+          {item.sound_description && ` — ${item.sound_description}`}
+        </div>
+      );
+    case 'note':
+      return (
+        <div className="script-editor__canvas-content-item" style={{ borderLeftColor: '#999', fontStyle: 'italic' }}>
+          <span className="tag">备注</span>
+          {item.note_text}
+        </div>
+      );
+    default:
+      return (
+        <div className="script-editor__canvas-content-item">
+          <span className="tag">{item.type}</span>
+          {item.description || item.text || JSON.stringify(item)}
+        </div>
+      );
+  }
+}
+
+/** 渲染选中场景的右侧画布 */
+function SceneCanvas() {
+  const script = useScriptStore((s) => s.script);
+  const selectedSceneId = useScriptStore((s) => s.selectedSceneId);
+
+  const scenes = script?.scenes || [];
+  const scene = scenes.find((s) => s.id === selectedSceneId);
+
+  if (!scene) {
+    return (
+      <div className="script-editor__canvas">
+        <div className="script-editor__canvas-placeholder">
+          请在左侧选择一个场景查看
+        </div>
+      </div>
+    );
+  }
+
+  const slugline = scene.slugline;
+
+  return (
+    <div className="script-editor__canvas">
+      <div className="script-editor__canvas-scene-title">
+        第{scene.sequence}场 — {scene.title || '未命名场景'}
+      </div>
+
+      {slugline && (
+        <div className="script-editor__canvas-slugline">
+          {[slugline.type, slugline.name, slugline.time]
+            .filter(Boolean)
+            .join(' · ')}
+        </div>
+      )}
+
+      {scene.characters_present?.length > 0 && (
+        <div className="script-editor__canvas-characters">
+          出场角色：{scene.characters_present.join('、')}
+        </div>
+      )}
+
+      {scene.mood && (
+        <div className="script-editor__canvas-characters">
+          氛围：{scene.mood}
+        </div>
+      )}
+
+      <div className="script-editor__canvas-content">
+        {(scene.content || []).map((item) => (
+          <ContentItem key={item.id} item={item} />
+        ))}
+      </div>
+
+      {scene.notes && (
+        <div style={{ marginTop: 16, padding: 12, background: '#fffbe6', borderRadius: 4, fontSize: 13, color: '#666' }}>
+          <strong>场景备注：</strong>{scene.notes}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function EditorPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { yaml, status, error, reset } = useTask();
+  const scriptId = searchParams.get('scriptId');
 
-  const [editedYaml, setEditedYaml] = useState(() => loadEditorDraft() || '');
-  const [activeTab, setActiveTab] = useState('edit');
+  const isLoading = useScriptStore((s) => s.isLoading);
+  const loadScript = useScriptStore((s) => s.loadScript);
+  const script = useScriptStore((s) => s.script);
 
-  // Sync yaml from context when task completes
   useEffect(() => {
-    if (yaml) {
-      setEditedYaml(yaml);
+    if (scriptId) {
+      loadScript(scriptId);
     }
-  }, [yaml]);
-
-  // Auto-save draft on change (debounced)
-  useEffect(() => {
-    if (!editedYaml) return;
-    const timer = setTimeout(() => saveEditorDraft(editedYaml), 500);
-    return () => clearTimeout(timer);
-  }, [editedYaml]);
-
-  const handleExport = () => {
-    const content = editedYaml || yaml;
-    if (!content?.trim()) {
-      message.warning('没有可导出的 YAML 内容');
-      return;
-    }
-    const blob = new Blob([content], { type: 'text/yaml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'script.yaml';
-    a.click();
-    URL.revokeObjectURL(url);
-    message.success('已导出 script.yaml');
-  };
-
-  const handleBack = () => {
-    reset();
-    navigate('/');
-  };
-
-  // Guard: no content available
-  if (!yaml && status !== 'completed' && !editedYaml) {
-    return (
-      <Card>
-        <Title level={4}>YAML 编辑</Title>
-        <Alert
-          type="info"
-          message="暂无剧本内容"
-          description={
-            <span>
-              请先在「小说输入」页面提交小说文本进行 AI 转换。
-              <br />
-              <Button
-                type="link"
-                icon={<ArrowLeftOutlined />}
-                onClick={handleBack}
-                style={{ paddingLeft: 0 }}
-              >
-                返回小说输入
-              </Button>
-            </span>
-          }
-          showIcon
-        />
-      </Card>
-    );
-  }
-
-  const tabItems = [
-    {
-      key: 'edit',
-      label: <span><EditOutlined /> 编辑</span>,
-      children: (
-        <CodeMirror
-          value={editedYaml || yaml}
-          height="calc(100vh - 340px)"
-          minHeight="400px"
-          extensions={[yamlLang()]}
-          theme={oneDark}
-          onChange={(val) => setEditedYaml(val)}
-          basicSetup={{
-            lineNumbers: true,
-            highlightActiveLine: true,
-            foldGutter: true,
-          }}
-        />
-      ),
-    },
-    {
-      key: 'preview',
-      label: <span><EyeOutlined /> 预览</span>,
-      children: <ScriptPreview yamlContent={editedYaml || yaml} />,
-    },
-  ];
+  }, [scriptId]);
 
   return (
-    <Card
-      title="剧本工作台"
-      extra={
-        <Space>
-          <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>
-            返回输入
-          </Button>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
+      {/* 顶部标题栏 */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 24px',
+          background: '#fff',
+          borderBottom: '1px solid #e8e8e8',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Button
-            type="primary"
-            icon={<ExportOutlined />}
-            onClick={handleExport}
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate('/')}
           >
-            导出 YAML
+            返回
           </Button>
-        </Space>
-      }
-    >
-      {error && (
-        <Alert type="error" message={error} style={{ marginBottom: 12 }} showIcon closable />
-      )}
-
-      <div style={{ marginBottom: 12 }}>
-        <Text type="secondary">
-          <EditOutlined style={{ marginRight: 4 }} />
-          可编辑 YAML 或切换到「预览」查看标准剧本格式。修改内容自动保存到本地。
-        </Text>
+          <Title level={4} style={{ margin: 0 }}>
+            剧本编辑器
+          </Title>
+          {script?.metadata?.title && (
+            <Text type="secondary">— {script.metadata.title}</Text>
+          )}
+        </div>
+        {!scriptId && (
+          <Text type="warning">请通过 scriptId 参数打开剧本</Text>
+        )}
       </div>
 
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={tabItems}
-        destroyInactiveTabPane={false}
-      />
-    </Card>
+      {/* 主体布局：左侧场景导航 + 右侧画布 */}
+      {isLoading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+          <Spin size="large" tip="加载剧本中..." />
+        </div>
+      ) : (
+        <div className="script-editor">
+          <SceneNav />
+          <SceneCanvas />
+        </div>
+      )}
+    </div>
   );
 }
