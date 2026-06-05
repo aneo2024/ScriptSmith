@@ -270,6 +270,14 @@ export default function LoginPage() {
       {/* CSS 动画注入 */}
       <style>{ANIMATION_STYLES}</style>
 
+      {/* Google Font: 思源宋体 */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&display=swap"
+        rel="stylesheet"
+      />
+
       {/* 第 1 层：森林背景 */}
       <div
         style={{
@@ -327,13 +335,14 @@ export default function LoginPage() {
           textAlign: 'center',
         }}
       >
-        {/* 标题：浮动 + 呼吸光晕 */}
+        {/* 标题：浮动 + 呼吸光晕 + 思源宋体 */}
         <Title
           style={{
-            fontSize: 72,
-            fontWeight: 800,
+            fontSize: 84,
+            fontWeight: 900,
+            fontFamily: '"Noto Serif SC", "Source Han Serif SC", "STSong", "SimSun", serif',
             color: COLORS.title,
-            letterSpacing: 16,
+            letterSpacing: 8,
             marginBottom: 4,
             textShadow: '0 0 20px rgba(255,248,210,0.3), 0 0 40px rgba(255,242,180,0.15), 0 2px 12px rgba(0,0,0,0.08)',
             animation: 'titleFloat 4s ease-in-out infinite, titleGlow 3s ease-in-out infinite',

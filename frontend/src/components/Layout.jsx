@@ -59,7 +59,7 @@ export default function AppLayout({ children }) {
               letterSpacing: 2,
               fontFamily: '"Georgia", "Noto Serif SC", serif',
             }}
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/login')}
           >
             剧匠
           </Text>
