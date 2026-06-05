@@ -74,7 +74,7 @@ export default function AppLayout({ children }) {
         width={220}
         theme="dark"
       >
-        <div style={{ padding: '16px 20px', height: 64 }}>
+        <div style={{ padding: '16px 20px', height: 64, cursor: 'pointer' }} onClick={() => navigate('/login')}>
           <Title level={4} style={{ color: '#fff', margin: 0 }}>
             {collapsed ? '剧' : '剧匠'}
           </Title>
@@ -167,7 +167,7 @@ export default function AppLayout({ children }) {
             >
               {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             </span>
-            <Text strong style={{ fontSize: 16 }}>
+            <Text strong style={{ fontSize: 16, cursor: 'pointer' }} onClick={() => navigate('/login')}>
               剧匠 ScriptSmith
             </Text>
           </Space>
