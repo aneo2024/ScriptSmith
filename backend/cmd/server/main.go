@@ -65,6 +65,7 @@ func main() {
 		v1.GET("/health", h.HealthCheck)
 		v1.POST("/auth/register", authH.Register)
 		v1.POST("/auth/login", authH.Login)
+		v1.GET("/auth/me", middleware.AuthMiddleware(), authH.Me)
 
 		// 需要认证的路由
 		auth := v1.Group("")
