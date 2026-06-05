@@ -394,8 +394,15 @@ func extractJSON(content string) string {
 		return matches[1]
 	}
 	content = strings.TrimSpace(content)
-	start := strings.Index(content, "{")
-	end := strings.LastIndex(content, "}")
+	// 优先匹配 JSON 数组 [...]
+	start := strings.Index(content, "[")
+	end := strings.LastIndex(content, "]")
+	if start >= 0 && end > start {
+		return content[start : end+1]
+	}
+	// 回退匹配 JSON 对象 {...}
+	start = strings.Index(content, "{")
+	end = strings.LastIndex(content, "}")
 	if start >= 0 && end > start {
 		return content[start : end+1]
 	}
@@ -426,17 +433,17 @@ func buildStructuredPrompt(novelText, format, style string) string {
 	}
 
 	styleLabel := map[string]string{
-		"faithful":    "严格遵循原著的叙事节奏与语言风格，不随意增删情节",
-		"commercial":  "强情节、快节奏，每场戏都紧扣观众注意力",
+		"faithful":     "严格遵循原著的叙事节奏与语言风格，不随意增删情节",
+		"commercial":   "强情节、快节奏，每场戏都紧扣观众注意力",
 		"experimental": "打破传统叙事结构，允许非线性叙事、打破第四面墙等手法",
-		"noir":        "黑色电影风格：阴暗色调、道德模糊、硬汉对白",
-		"romantic":    "强调情感细腻描写，对白温柔富有诗意",
-		"thriller":    "悬疑惊悚：制造紧张感、反转与伏笔",
-		"wuxia":       "武侠风：江湖恩怨、武打场景、侠义精神",
-		"xianxia":     "仙侠玄幻：仙法对决、瑰丽场景、宏大世界观",
-		"comedy":      "喜剧幽默：夸张对白、误会巧合、笑点密集",
-		"tragedy":     "悲剧深沉：人物命运曲折、情感厚重",
-		"minimalist":  "极简留白：对白精炼、情感含蓄、以少胜多",
+		"noir":         "黑色电影风格：阴暗色调、道德模糊、硬汉对白",
+		"romantic":     "强调情感细腻描写，对白温柔富有诗意",
+		"thriller":     "悬疑惊悚：制造紧张感、反转与伏笔",
+		"wuxia":        "武侠风：江湖恩怨、武打场景、侠义精神",
+		"xianxia":      "仙侠玄幻：仙法对决、瑰丽场景、宏大世界观",
+		"comedy":       "喜剧幽默：夸张对白、误会巧合、笑点密集",
+		"tragedy":      "悲剧深沉：人物命运曲折、情感厚重",
+		"minimalist":   "极简留白：对白精炼、情感含蓄、以少胜多",
 	}[style]
 	if styleLabel == "" {
 		styleLabel = style

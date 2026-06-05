@@ -363,7 +363,7 @@ func (h *WorkHandler) GenerateCharacterProfiles(c *gin.Context) {
 		}
 	}
 
-	log.Printf("[work=%s] 开始 AI 生成角色设定 (%d 个角色)", workID, len(charList))
+	log.Printf("[work=%s] 开始 AI 生成角色设定 (%d 个角色, provider=%s)", workID, len(charList), cfg.Name)
 	var results []map[string]string
 	if cfg.APIKey != "" && cfg.Name != "system-default" {
 		results, err = h.aiClient.GenerateWorkCharacterProfilesWithConfig(cfg, string(charsJSON), synopsis)
@@ -371,6 +371,7 @@ func (h *WorkHandler) GenerateCharacterProfiles(c *gin.Context) {
 		results, err = h.aiClient.GenerateWorkCharacterProfiles(string(charsJSON), synopsis)
 	}
 	if err != nil {
+		log.Printf("[work=%s] AI 生成角色设定失败: %v", workID, err)
 		ErrorInternal(c, "AI 生成角色设定失败: "+err.Error())
 		return
 	}

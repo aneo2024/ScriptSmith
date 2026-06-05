@@ -484,26 +484,6 @@ export default function WorkDetailPage() {
                   {script.summary ? '重新生成' : 'AI 生成梗概'}
                 </Button>
               </div>
-
-              {/* AI 能力按钮组 */}
-              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                <Button
-                  size="small"
-                  icon={generatingAppearances.has(script.id) ? <LoadingOutlined /> : <SkinOutlined />}
-                  loading={generatingAppearances.has(script.id)}
-                  onClick={() => handleGenerateAppearances(script.id)}
-                >
-                  生成角色装扮
-                </Button>
-                <Button
-                  size="small"
-                  icon={generatingEnvironments.has(script.id) ? <LoadingOutlined /> : <HeatMapOutlined />}
-                  loading={generatingEnvironments.has(script.id)}
-                  onClick={() => handleGenerateEnvironments(script.id)}
-                >
-                  生成场景环境
-                </Button>
-              </div>
             </Card>
 
             {/* 概览统计 */}
@@ -610,13 +590,25 @@ export default function WorkDetailPage() {
         ),
         children:
           scenes.length > 0 ? (
-            <Row gutter={[16, 16]}>
-              {scenes.map((scene, idx) => (
-                <Col xs={24} sm={12} lg={8} xl={6} key={scene.id || idx}>
-                  <SceneCard scene={scene} index={idx} />
-                </Col>
-              ))}
-            </Row>
+            <>
+              <div style={{ marginBottom: 16 }}>
+                <Button
+                  size="small"
+                  icon={generatingEnvironments.has(script.id) ? <LoadingOutlined /> : <HeatMapOutlined />}
+                  loading={generatingEnvironments.has(script.id)}
+                  onClick={() => handleGenerateEnvironments(script.id)}
+                >
+                  生成场景环境
+                </Button>
+              </div>
+              <Row gutter={[16, 16]}>
+                {scenes.map((scene, idx) => (
+                  <Col xs={24} sm={12} lg={8} xl={6} key={scene.id || idx}>
+                    <SceneCard scene={scene} index={idx} />
+                  </Col>
+                ))}
+              </Row>
+            </>
           ) : (
             <Empty description="暂无场景数据" />
           ),
@@ -630,15 +622,27 @@ export default function WorkDetailPage() {
         ),
         children:
           characters.length > 0 ? (
-            <Card>
-              <Table
-                dataSource={characters.map((c, i) => ({ ...c, key: c.id || i }))}
-                columns={characterColumns}
-                pagination={false}
-                size="middle"
-                locale={{ emptyText: '暂无角色' }}
-              />
-            </Card>
+            <>
+              <div style={{ marginBottom: 16 }}>
+                <Button
+                  size="small"
+                  icon={generatingAppearances.has(script.id) ? <LoadingOutlined /> : <SkinOutlined />}
+                  loading={generatingAppearances.has(script.id)}
+                  onClick={() => handleGenerateAppearances(script.id)}
+                >
+                  生成角色装扮
+                </Button>
+              </div>
+              <Card>
+                <Table
+                  dataSource={characters.map((c, i) => ({ ...c, key: c.id || i }))}
+                  columns={characterColumns}
+                  pagination={false}
+                  size="middle"
+                  locale={{ emptyText: '暂无角色' }}
+                />
+              </Card>
+            </>
           ) : (
             <Empty description="暂无角色数据" />
           ),
@@ -679,72 +683,76 @@ export default function WorkDetailPage() {
       </div>
 
       {/* 作品信息卡：梗概 + 人物小传 */}
-      {(work?.synopsis || work?.cover_image || workCharProfiles.length > 0) && (
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          {work?.cover_image && (
-            <Col xs={24} md={6}>
-              <Card size="small" cover={
-                <div style={{
-                  height: 200,
-                  background: `url(${work.cover_image}) center/cover no-repeat`,
-                  borderRadius: '8px 8px 0 0',
-                }} />
-              } />
-            </Col>
-          )}
-          <Col xs={24} md={work?.cover_image ? 18 : 24}>
-            <Card size="small" style={{ height: '100%' }}>
-              {work?.synopsis && (
-                <div style={{ marginBottom: workCharProfiles.length > 0 ? 12 : 0 }}>
-                  <Text strong>一句话梗概：</Text>
-                  <Text>{work.synopsis}</Text>
-                </div>
-              )}
-              {workCharProfiles.length > 0 && (
-                <div>
-                  <Text strong>人物小传：</Text>
-                  <Row gutter={[12, 8]} style={{ marginTop: 8 }}>
-                    {workCharProfiles.map((char, i) => (
-                      <Col xs={24} sm={12} md={8} key={i}>
-                        <Card size="small" style={{ background: '#fafafa' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                            <div style={{
-                              width: 36, height: 36, borderRadius: '50%',
-                              background: `hsl(${(i * 60) % 360}, 40%, 60%)`,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              color: '#fff', fontWeight: 'bold', fontSize: 14,
-                            }}>
-                              {char.name?.[0]}
-                            </div>
-                            <Text strong>{char.name}</Text>
-                            {char.age && <Tag>{char.age}{char.age.includes('岁') ? '' : '岁'}</Tag>}
-                            {char.gender && <Tag>{char.gender}</Tag>}
-                          </div>
-                          {char.appearance && (
-                            <Paragraph type="secondary" style={{ margin: '0 0 4px 0', fontSize: 12 }} ellipsis={{ rows: 2 }}>
-                              <Text type="secondary" style={{ fontSize: 11 }}>外貌：</Text>{char.appearance}
-                            </Paragraph>
-                          )}
-                          {char.personality && (
-                            <Paragraph type="secondary" style={{ margin: '0 0 4px 0', fontSize: 12 }} ellipsis={{ rows: 2 }}>
-                              <Text type="secondary" style={{ fontSize: 11 }}>性格：</Text>{char.personality}
-                            </Paragraph>
-                          )}
-                          {char.background && (
-                            <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }} ellipsis={{ rows: 2 }}>
-                              <Text type="secondary" style={{ fontSize: 11 }}>背景：</Text>{char.background}
-                            </Paragraph>
-                          )}
-                        </Card>
-                      </Col>
-                    ))}
-                  </Row>
-                </div>
-              )}
-            </Card>
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        {work?.cover_image && (
+          <Col xs={24} md={6}>
+            <Card size="small" cover={
+              <div style={{
+                height: 200,
+                background: `url(${work.cover_image}) center/cover no-repeat`,
+                borderRadius: '8px 8px 0 0',
+              }} />
+            } />
           </Col>
-        </Row>
-      )}
+        )}
+        <Col xs={24} md={work?.cover_image ? 18 : 24}>
+          <Card size="small" style={{ minHeight: workCharProfiles.length > 0 ? undefined : 80 }}>
+            {work?.synopsis && (
+              <div style={{ marginBottom: workCharProfiles.length > 0 ? 12 : 0 }}>
+                <Text strong>一句话梗概：</Text>
+                <Text>{work.synopsis}</Text>
+              </div>
+            )}
+            {workCharProfiles.length > 0 ? (
+              <div>
+                <Text strong>人物小传：</Text>
+                <Row gutter={[12, 8]} style={{ marginTop: 8 }}>
+                  {workCharProfiles.map((char, i) => (
+                    <Col xs={24} sm={12} md={8} key={i}>
+                      <Card size="small" style={{ background: '#fafafa' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <div style={{
+                            width: 36, height: 36, borderRadius: '50%',
+                            background: `hsl(${(i * 60) % 360}, 40%, 60%)`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: '#fff', fontWeight: 'bold', fontSize: 14,
+                          }}>
+                            {char.name?.[0]}
+                          </div>
+                          <Text strong>{char.name}</Text>
+                          {char.age && <Tag>{char.age}{char.age.includes('岁') ? '' : '岁'}</Tag>}
+                          {char.gender && <Tag>{char.gender}</Tag>}
+                        </div>
+                        {char.appearance && (
+                          <Paragraph type="secondary" style={{ margin: '0 0 4px 0', fontSize: 12 }} ellipsis={{ rows: 2 }}>
+                            <Text type="secondary" style={{ fontSize: 11 }}>外貌：</Text>{char.appearance}
+                          </Paragraph>
+                        )}
+                        {char.personality && (
+                          <Paragraph type="secondary" style={{ margin: '0 0 4px 0', fontSize: 12 }} ellipsis={{ rows: 2 }}>
+                            <Text type="secondary" style={{ fontSize: 11 }}>性格：</Text>{char.personality}
+                          </Paragraph>
+                        )}
+                        {char.background && (
+                          <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }} ellipsis={{ rows: 2 }}>
+                            <Text type="secondary" style={{ fontSize: 11 }}>背景：</Text>{char.background}
+                          </Paragraph>
+                        )}
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+              </div>
+            ) : (
+              !work?.synopsis && (
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  点击上方「生成角色设定」按钮，AI 将自动生成角色长相、年龄、性格和背景故事
+                </Text>
+              )
+            )}
+          </Card>
+        </Col>
+      </Row>
 
       <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
         <Button
