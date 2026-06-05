@@ -8,12 +8,12 @@ import (
 
 // Script 剧本结构化存储
 type Script struct {
-	ID         string         `gorm:"primaryKey" json:"id"`
-	TaskID     string         `gorm:"index" json:"task_id"`
-	Metadata   datatypes.JSON `gorm:"type:json" json:"metadata"`     // {title, original_title, format, genre}
-	Characters datatypes.JSON `gorm:"type:json" json:"characters"`   // [{id, name, type, description}]
-	Scenes     datatypes.JSON `gorm:"type:json" json:"scenes"`       // [{id, sequence, slugline, content}]
-	YAML       string         `gorm:"type:text" json:"yaml"`         // 实时生成的 YAML
+	ID         string         `json:"id"`
+	TaskID     string         `json:"task_id"`
+	Metadata   datatypes.JSON `json:"metadata"`   // {title, original_title, format, genre}
+	Characters datatypes.JSON `json:"characters"` // [{id, name, type, description}]
+	Scenes     datatypes.JSON `json:"scenes"`     // [{id, sequence, slugline, content}]
+	YAML       string         `json:"yaml"`       // 实时生成的 YAML
 	Version    int            `json:"version"`
 	CreatedAt  time.Time      `json:"created_at"`
 	UpdatedAt  time.Time      `json:"updated_at"`
@@ -29,7 +29,7 @@ type Slugline struct {
 // SceneContent 场景内的一个内容块（动作/对话/音效等）
 type SceneContent struct {
 	ID               string `json:"id"`
-	Type             string `json:"type"` // action / dialogue / transition / sound / note
+	Type             string `json:"type"`                        // action / dialogue / transition / sound / note
 	Description      string `json:"description,omitempty"`       // action 用
 	CharacterID      string `json:"character_id,omitempty"`      // dialogue 用
 	CharacterName    string `json:"character_name,omitempty"`    // dialogue 用
@@ -61,10 +61,6 @@ type Character struct {
 	Name        string `json:"name"`
 	Type        string `json:"type"` // protagonist / antagonist / supporting / extra
 	Description string `json:"description"`
-	Age         string `json:"age,omitempty"`
-	Gender      string `json:"gender,omitempty"`
-	Occupation  string `json:"occupation,omitempty"`
-	Arc         string `json:"arc,omitempty"`
 }
 
 // Metadata 剧本元数据
