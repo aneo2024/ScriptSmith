@@ -138,3 +138,42 @@
   text-align: left;
   min-height: 60px;
 }
+
+/* 编辑操作按钮 */
+.edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+
+.edit-btn {
+  padding: 4px 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-btn:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.edit-btn.save {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: #fff;
+}
+
+.edit-btn.save:hover {
+  background: #40a9ff;
+  border-color: #40a9ff;
+}
+
+.edit-btn.cancel:hover {
+  color: #ff4d4f;
+  border-color: #ff4d4f;
+}
