@@ -242,7 +242,7 @@ type GenerateArticleRequest struct {
 	Topic string `json:"topic" binding:"required"` // 创作主题（如：人物塑造、开场技巧等）
 }
 
-// GenerateArticle AI 自动生成一篇剧本创作知识文章
+// GenerateArticle AI 自动生成一篇剧本创作知识文章（同步等待完成）
 // POST /v1/inspiration/generate
 func (h *InspirationHandler) GenerateArticle(c *gin.Context) {
 	if h.aiClient == nil {
@@ -268,58 +268,57 @@ func (h *InspirationHandler) GenerateArticle(c *gin.Context) {
 		return
 	}
 
-	// 异步 AI 生成文章
-	go func() {
-		content, err := h.aiClient.GenerateInspirationArticle(req.Topic)
-		if err != nil {
-			log.Printf("AI 生成灵感文章失败 (topic=%s): %v", req.Topic, err)
-			return
-		}
+	// 同步调用 AI 生成文章
+	content, err := h.aiClient.GenerateInspirationArticle(req.Topic)
+	if err != nil {
+		log.Printf("AI 生成灵感文章失败 (topic=%s): %v", req.Topic, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "AI 生成失败: " + err.Error()})
+		return
+	}
 
-		// 从内容中提取标题（假设第一行是 # 标题）
-		title := req.Topic
-		summary := ""
-		lines := strings.Split(content, "\n")
-		if len(lines) > 0 {
-			firstLine := strings.TrimPrefix(lines[0], "# ")
-			firstLine = strings.TrimPrefix(firstLine, "#")
-			if strings.TrimSpace(firstLine) != "" {
-				title = strings.TrimSpace(firstLine)
-			}
+	// 从内容中提取标题和摘要
+	title := req.Topic
+	summary := ""
+	lines := strings.Split(content, "\n")
+	if len(lines) > 0 {
+		firstLine := strings.TrimPrefix(lines[0], "# ")
+		firstLine = strings.TrimPrefix(firstLine, "#")
+		if strings.TrimSpace(firstLine) != "" {
+			title = strings.TrimSpace(firstLine)
 		}
-		if len(lines) > 2 {
-			summary = strings.TrimSpace(lines[1])
-			if len([]rune(summary)) > 100 {
-				summary = string([]rune(summary)[:100]) + "…"
-			}
+	}
+	if len(lines) > 2 {
+		summary = strings.TrimSpace(lines[1])
+		if len([]rune(summary)) > 100 {
+			summary = string([]rune(summary)[:100]) + "…"
 		}
+	}
 
-		article := &model.Article{
-			ID:         uuid.New().String(),
-			Title:      title,
-			Summary:    summary,
-			Content:    content,
-			AuthorName: "AI 剧作助手",
-			IsOfficial: true,
-			Tags:       "剧本创作," + req.Topic,
-			TopicID:    topic.ID,
-		}
+	article := &model.Article{
+		ID:         uuid.New().String(),
+		Title:      title,
+		Summary:    summary,
+		Content:    content,
+		AuthorName: "AI 剧作助手",
+		IsOfficial: true,
+		Tags:       "剧本创作," + req.Topic,
+		TopicID:    topic.ID,
+	}
 
-		if err := h.articleRepo.CreateArticle(article); err != nil {
-			log.Printf("保存 AI 生成文章失败: %v", err)
-			return
-		}
+	if err := h.articleRepo.CreateArticle(article); err != nil {
+		log.Printf("保存 AI 生成文章失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存文章失败: " + err.Error()})
+		return
+	}
 
-		if err := h.articleRepo.UpdateTopicArticleCount(topic.ID); err != nil {
-			log.Printf("更新话题文章数失败: %v", err)
-		}
+	if err := h.articleRepo.UpdateTopicArticleCount(topic.ID); err != nil {
+		log.Printf("更新话题文章数失败: %v", err)
+	}
 
-		log.Printf("AI 灵感文章已生成: %s (topic=%s)", title, req.Topic)
-	}()
+	log.Printf("AI 灵感文章已生成: %s (topic=%s)", title, req.Topic)
 
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "generating",
-		"message": "AI 正在生成文章，请稍后刷新",
+	c.JSON(http.StatusCreated, gin.H{
+		"article": article,
 		"topic":   topic,
 	})
 }

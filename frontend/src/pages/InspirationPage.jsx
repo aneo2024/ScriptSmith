@@ -17,6 +17,8 @@ import {
   Badge,
   Tooltip,
   Pagination,
+  Modal,
+  Progress,
 } from 'antd';
 import {
   BulbOutlined,
@@ -264,6 +266,7 @@ export default function InspirationPage() {
   const [total, setTotal] = useState(0);
   const [generateInput, setGenerateInput] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [generateStatus, setGenerateStatus] = useState('');
   const pageSize = 10;
 
   const loadArticles = async (p = 1) => {
@@ -321,15 +324,37 @@ export default function InspirationPage() {
       return;
     }
     setGenerating(true);
+    setGenerateStatus('正在连接 AI 引擎...');
     try {
+      // 模拟进度变化，给用户心理预期
+      const steps = [
+        { delay: 1500, text: '正在分析主题：' + topic },
+        { delay: 4000, text: '正在搜集剧本创作相关资料...' },
+        { delay: 7000, text: 'AI 正在撰写文章...' },
+        { delay: 12000, text: '正在润色和排版...' },
+      ];
+      const timers = steps.map((s) =>
+        setTimeout(() => setGenerateStatus(s.text), s.delay)
+      );
+
       const result = await generateArticle(topic);
-      message.success('AI 正在生成文章，请稍后刷新页面查看');
+
+      // 清除模拟进度定时器
+      timers.forEach(clearTimeout);
+
+      // 拿到文章后，直接插入列表顶部
+      if (result.article) {
+        setArticles((prev) => [result.article, ...prev]);
+        setTotal((prev) => prev + 1);
+      }
       setGenerateInput('');
-      loadTopics();
+      message.success('文章生成成功！');
+      loadTopics(); // 刷新话题榜
     } catch (err) {
       message.error('生成失败: ' + (err.response?.data?.error || err.message));
     } finally {
       setGenerating(false);
+      setGenerateStatus('');
     }
   };
 
@@ -470,6 +495,42 @@ export default function InspirationPage() {
           </Card>
         </Col>
       </Row>
+
+      {/* AI 生成加载弹窗 */}
+      <Modal
+        open={generating}
+        closable={false}
+        footer={null}
+        centered
+        width={420}
+        maskClosable={false}
+      >
+        <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+          <Spin size="large" />
+          <div style={{ marginTop: 24 }}>
+            <Title level={4} style={{ marginBottom: 4 }}>
+               AI 正在创作...
+            </Title>
+            <Text type="secondary" style={{ fontSize: 14 }}>
+              {generateStatus || '准备中...'}
+            </Text>
+          </div>
+          <div style={{ marginTop: 20 }}>
+            <Progress
+              percent={99}
+              status="active"
+              strokeColor={{
+                '0%': '#3a6b28',
+                '100%': '#52c41a',
+              }}
+              showInfo={false}
+            />
+          </div>
+          <Text type="secondary" style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
+            这通常需要 10-30 秒，请耐心等待
+          </Text>
+        </div>
+      </Modal>
     </div>
   );
 }

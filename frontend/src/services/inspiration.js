@@ -13,9 +13,9 @@ export const listArticles = (params = {}) =>
 export const likeArticle = (id) =>
   api.post(`/inspiration/articles/${id}/like`).then((r) => r.data);
 
-// AI 生成文章
+// AI 生成文章（超时较长，因 AI 需要时间）
 export const generateArticle = (topic) =>
-  api.post('/inspiration/generate', { topic }).then((r) => r.data);
+  api.post('/inspiration/generate', { topic }, { timeout: 120000 }).then((r) => r.data);
 
 // 话题
 export const createTopic = (data) =>
