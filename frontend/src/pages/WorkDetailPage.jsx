@@ -84,6 +84,13 @@ const characterColumns = [
     ),
   },
   { title: '简介', dataIndex: 'description', key: 'description', ellipsis: true },
+  {
+    title: '外貌',
+    dataIndex: 'appearance',
+    key: 'appearance',
+    ellipsis: true,
+    render: (text) => text ? <Text style={{ fontSize: 13, color: '#666' }}>{text}</Text> : <Text type="secondary">-</Text>,
+  },
 ];
 
 function SceneCard({ scene, index }) {
@@ -206,6 +213,8 @@ export default function WorkDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeScriptId, setActiveScriptId] = useState(null);
   const [generatingSummaries, setGeneratingSummaries] = useState(new Set());
+  const [generatingAppearances, setGeneratingAppearances] = useState(new Set());
+  const [generatingEnvironments, setGeneratingEnvironments] = useState(new Set());
 
   const handleGenerateSummary = async (scriptId) => {
     setGeneratingSummaries((prev) => new Set(prev).add(scriptId));
@@ -219,6 +228,43 @@ export default function WorkDetailPage() {
       message.error('生成梗概失败: ' + (err.response?.data?.error || err.message));
     } finally {
       setGeneratingSummaries((prev) => {
+        const next = new Set(prev);
+        next.delete(scriptId);
+        return next;
+      });
+    }
+  };
+
+  const handleGenerateAppearances = async (scriptId) => {
+    setGeneratingAppearances((prev) => new Set(prev).add(scriptId));
+    try {
+      await generateCharacterAppearances(scriptId);
+      message.success('角色外貌已生成');
+      // 刷新剧本数据以获取最新的 characters
+      const { scripts: refreshed } = await listWorkScripts(id);
+      setScripts(refreshed);
+    } catch (err) {
+      message.error('生成角色外貌失败: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setGeneratingAppearances((prev) => {
+        const next = new Set(prev);
+        next.delete(scriptId);
+        return next;
+      });
+    }
+  };
+
+  const handleGenerateEnvironments = async (scriptId) => {
+    setGeneratingEnvironments((prev) => new Set(prev).add(scriptId));
+    try {
+      await generateSceneEnvironments(scriptId);
+      message.success('场景环境已生成');
+      const { scripts: refreshed } = await listWorkScripts(id);
+      setScripts(refreshed);
+    } catch (err) {
+      message.error('生成场景环境失败: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setGeneratingEnvironments((prev) => {
         const next = new Set(prev);
         next.delete(scriptId);
         return next;
@@ -408,6 +454,26 @@ export default function WorkDetailPage() {
                   style={{ whiteSpace: 'nowrap' }}
                 >
                   {script.summary ? '重新生成' : 'AI 生成梗概'}
+                </Button>
+              </div>
+
+              {/* AI 能力按钮组 */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                <Button
+                  size="small"
+                  icon={generatingAppearances.has(script.id) ? <LoadingOutlined /> : <SkinOutlined />}
+                  loading={generatingAppearances.has(script.id)}
+                  onClick={() => handleGenerateAppearances(script.id)}
+                >
+                  生成角色外貌
+                </Button>
+                <Button
+                  size="small"
+                  icon={generatingEnvironments.has(script.id) ? <LoadingOutlined /> : <HeatMapOutlined />}
+                  loading={generatingEnvironments.has(script.id)}
+                  onClick={() => handleGenerateEnvironments(script.id)}
+                >
+                  生成场景环境
                 </Button>
               </div>
             </Card>
