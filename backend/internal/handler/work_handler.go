@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"log"
-	"net/http"
 	"scriptsmith/internal/model"
 	"scriptsmith/internal/repository"
 
@@ -55,22 +54,22 @@ type UpdateWorkRequest struct {
 func (h *WorkHandler) CreateWork(c *gin.Context) {
 	var req CreateWorkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ErrorBadRequest(c, err.Error())
 		return
 	}
 
 	userID := c.GetString("userID")
 	work := &model.Work{
-		ID:        uuid.New().String(),
-		UserID:    userID,
-		Title:     req.Title,
-		Synopsis:  req.Synopsis,
-		Summary:   req.Summary,
+		ID:         uuid.New().String(),
+		UserID:     userID,
+		Title:      req.Title,
+		Synopsis:   req.Synopsis,
+		Summary:    req.Summary,
 		CoverImage: req.CoverImage,
-		Status:    "draft",
-		Genre:     req.Genre,
-		MainChar:  req.MainChar,
-		WordCount: req.WordCount,
+		Status:     "draft",
+		Genre:      req.Genre,
+		MainChar:   req.MainChar,
+		WordCount:  req.WordCount,
 	}
 
 	if len(req.CharacterProfiles) > 0 {
@@ -84,11 +83,11 @@ func (h *WorkHandler) CreateWork(c *gin.Context) {
 	}
 
 	if err := h.workRepo.Create(work); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, work)
+	Created(c, work)
 }
 
 // GetWork 获取单个作品
@@ -99,16 +98,16 @@ func (h *WorkHandler) GetWork(c *gin.Context) {
 
 	work, err := h.workRepo.Get(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "作品不存在"})
+		ErrorNotFound(c, "作品不存在")
 		return
 	}
 
 	if work.UserID != userID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "无权访问该作品"})
+		ErrorForbidden(c, "无权访问该作品")
 		return
 	}
 
-	c.JSON(http.StatusOK, work)
+	OK(c, work)
 }
 
 // ListWorks 获取用户的作品列表
@@ -117,11 +116,11 @@ func (h *WorkHandler) ListWorks(c *gin.Context) {
 	userID := c.GetString("userID")
 	works, err := h.workRepo.ListByUserID(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"works": works})
+	OK(c, gin.H{"works": works})
 }
 
 // UpdateWork 更新作品
@@ -132,18 +131,18 @@ func (h *WorkHandler) UpdateWork(c *gin.Context) {
 
 	work, err := h.workRepo.Get(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "作品不存在"})
+		ErrorNotFound(c, "作品不存在")
 		return
 	}
 
 	if work.UserID != userID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "无权修改该作品"})
+		ErrorForbidden(c, "无权修改该作品")
 		return
 	}
 
 	var req UpdateWorkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ErrorBadRequest(c, err.Error())
 		return
 	}
 
@@ -181,11 +180,11 @@ func (h *WorkHandler) UpdateWork(c *gin.Context) {
 	}
 
 	if err := h.workRepo.Update(work); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, work)
+	OK(c, work)
 }
 
 // DeleteWork 删除作品（级联删除关联的剧本和任务）
@@ -196,12 +195,12 @@ func (h *WorkHandler) DeleteWork(c *gin.Context) {
 
 	work, err := h.workRepo.Get(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "作品不存在"})
+		ErrorNotFound(c, "作品不存在")
 		return
 	}
 
 	if work.UserID != userID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "无权删除该作品"})
+		ErrorForbidden(c, "无权删除该作品")
 		return
 	}
 
@@ -225,12 +224,12 @@ func (h *WorkHandler) DeleteWork(c *gin.Context) {
 
 	// 3. 删除作品
 	if err := h.workRepo.Delete(id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
 
 	log.Printf("作品 %s 及其 %d 个关联剧本已删除", id, len(scripts))
-	c.JSON(http.StatusOK, gin.H{"status": "ok", "deleted_scripts": len(scripts)})
+	OK(c, gin.H{"status": "ok", "deleted_scripts": len(scripts)})
 }
 
 // GetWorkCount 获取用户作品数量
@@ -239,11 +238,11 @@ func (h *WorkHandler) GetWorkCount(c *gin.Context) {
 	userID := c.GetString("userID")
 	count, err := h.workRepo.CountByUserID(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"count": count})
+	OK(c, gin.H{"count": count})
 }
 
 // GetStats 获取用户作品统计（作品数 + 总字数）
@@ -252,11 +251,11 @@ func (h *WorkHandler) GetStats(c *gin.Context) {
 	userID := c.GetString("userID")
 	count, totalWords, err := h.workRepo.StatsByUserID(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"count": count, "total_words": totalWords})
+	OK(c, gin.H{"count": count, "total_words": totalWords})
 }
 
 // RegisterRoutes 注册路由

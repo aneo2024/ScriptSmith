@@ -1,13 +1,12 @@
 package handler
 
 import (
-	"net/http"
 	"regexp"
-	"strings"
-	"time"
 	"scriptsmith/internal/model"
 	"scriptsmith/internal/repository"
 	"scriptsmith/pkg/jwt"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -58,24 +57,24 @@ func validateRegister(req *RegisterRequest) string {
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数不合法"})
+		ErrorBadRequest(c, "参数不合法")
 		return
 	}
 
 	if msg := validateRegister(&req); msg != "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		ErrorBadRequest(c, msg)
 		return
 	}
 
 	// 检查用户名是否已存在
 	if existing, _ := h.userRepo.GetByUsername(req.Username); existing != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "用户名已存在"})
+		ErrorConflict(c, "用户名已存在")
 		return
 	}
 
 	hash, err := repository.HashPassword(req.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "密码加密失败"})
+		ErrorInternal(c, "密码加密失败")
 		return
 	}
 
@@ -87,11 +86,11 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	if err := h.userRepo.CreateUser(user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用户失败"})
+		ErrorInternal(c, "创建用户失败")
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
+	Created(c, gin.H{
 		"user_id":  user.ID,
 		"username": user.Username,
 	})
@@ -102,35 +101,35 @@ func (h *AuthHandler) Register(c *gin.Context) {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数不合法"})
+		ErrorBadRequest(c, "参数不合法")
 		return
 	}
 
 	user, err := h.userRepo.GetByUsername(req.Username)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
+		ErrorUnauthorized(c, "用户名或密码错误")
 		return
 	}
 
 	if !repository.CheckPassword(user.PasswordHash, req.Password) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
+		ErrorUnauthorized(c, "用户名或密码错误")
 		return
 	}
 
 	token, err := jwt.GenerateToken(user.ID, user.Role)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成 token 失败"})
+		ErrorInternal(c, "生成 token 失败")
 		return
 	}
 
 	// 生成刷新令牌（有效期 7 天）
 	refreshToken, err := h.refreshTokenRepo.Create(user.ID, 7*24*time.Hour)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成刷新令牌失败"})
+		ErrorInternal(c, "生成刷新令牌失败")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	OK(c, gin.H{
 		"token":         token,
 		"refresh_token": refreshToken,
 		"expires_in":    86400,
@@ -147,35 +146,35 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		RefreshToken string `json:"refresh_token" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数不合法"})
+		ErrorBadRequest(c, "参数不合法")
 		return
 	}
 
 	userID, err := h.refreshTokenRepo.ValidateAndConsume(req.RefreshToken)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "刷新令牌无效或已过期"})
+		ErrorUnauthorized(c, "刷新令牌无效或已过期")
 		return
 	}
 
 	user, err := h.userRepo.GetByID(userID)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户不存在"})
+		ErrorUnauthorized(c, "用户不存在")
 		return
 	}
 
 	token, err := jwt.GenerateToken(user.ID, user.Role)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成 token 失败"})
+		ErrorInternal(c, "生成 token 失败")
 		return
 	}
 
 	refreshToken, err := h.refreshTokenRepo.Create(user.ID, 7*24*time.Hour)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成刷新令牌失败"})
+		ErrorInternal(c, "生成刷新令牌失败")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	OK(c, gin.H{
 		"token":         token,
 		"refresh_token": refreshToken,
 		"expires_in":    86400,
@@ -202,7 +201,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	// 撤销该用户所有 refresh token
 	_ = h.refreshTokenRepo.RevokeByUserID(userID)
 
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	OK(c, gin.H{"status": "ok"})
 }
 
 // Me 获取当前用户信息
@@ -210,17 +209,17 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 func (h *AuthHandler) Me(c *gin.Context) {
 	userID := c.GetString("userID")
 	if userID == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "未认证"})
+		ErrorUnauthorized(c, "未认证")
 		return
 	}
 
 	user, err := h.userRepo.GetByID(userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+		ErrorNotFound(c, "用户不存在")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	OK(c, gin.H{
 		"user_id":  user.ID,
 		"username": user.Username,
 		"email":    user.Email,
