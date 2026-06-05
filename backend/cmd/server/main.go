@@ -20,8 +20,9 @@ import (
 )
 
 func main() {
-	// 加载 .env 文件（不存在时静默忽略）
-	_ = godotenv.Load()
+	// 加载 .env 文件（从当前目录或上级目录查找）
+	_ = godotenv.Load(".env")
+	_ = godotenv.Load("../../.env")
 
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
