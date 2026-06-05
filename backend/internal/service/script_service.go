@@ -202,6 +202,15 @@ func (s *ScriptService) GetStructuredScript(scriptID string) (*model.Script, err
 	return script, nil
 }
 
+// GetScriptByTaskID 按任务 ID 获取关联的结构化剧本
+func (s *ScriptService) GetScriptByTaskID(taskID string) (*model.Script, error) {
+	script, err := s.scriptRepo.GetByTaskID(taskID)
+	if err != nil {
+		return nil, fmt.Errorf("剧本不存在: %w", err)
+	}
+	return script, nil
+}
+
 // UpdateScene 更新指定剧本中的某个场景
 func (s *ScriptService) UpdateScene(scriptID, sceneID string, scene model.Scene) error {
 	script, err := s.scriptRepo.Get(scriptID)
