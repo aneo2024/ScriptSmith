@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Layout, Menu, Typography, Divider } from 'antd';
+import { Layout, Menu, Typography, Divider, Button, Space } from 'antd';
 import {
   FileTextOutlined,
   EditOutlined,
@@ -7,9 +7,11 @@ import {
   UnorderedListOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  LogoutOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import RecentTasks from './RecentTasks';
+import { useAuth } from '../hooks/useAuth';
 
 const { Sider, Content, Header } = Layout;
 const { Title, Text } = Typography;
@@ -25,12 +27,18 @@ export default function AppLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const selectedKey = menuItems.some((m) => m.key === location.pathname)
     ? location.pathname
     : '/';
 
   const handleMenuClick = ({ key }) => navigate(key);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -69,18 +77,33 @@ export default function AppLayout({ children }) {
             borderBottom: '1px solid #f0f0f0',
             display: 'flex',
             alignItems: 'center',
-            gap: 16,
+            justifyContent: 'space-between',
           }}
         >
-          <span
-            onClick={() => setCollapsed(!collapsed)}
-            style={{ cursor: 'pointer', fontSize: 18 }}
-          >
-            {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-          </span>
-          <Text strong style={{ fontSize: 16 }}>
-            剧匠 ScriptSmith
-          </Text>
+          <Space>
+            <span
+              onClick={() => setCollapsed(!collapsed)}
+              style={{ cursor: 'pointer', fontSize: 18 }}
+            >
+              {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            </span>
+            <Text strong style={{ fontSize: 16 }}>
+              剧匠 ScriptSmith
+            </Text>
+          </Space>
+          {user && (
+            <Space>
+              <Text type="secondary">{user.username}</Text>
+              <Button
+                type="text"
+                icon={<LogoutOutlined />}
+                onClick={handleLogout}
+                size="small"
+              >
+                退出
+              </Button>
+            </Space>
+          )}
         </Header>
         <Content
           style={{
