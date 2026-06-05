@@ -2,19 +2,20 @@ import { useRef, useEffect } from 'react';
 
 // ========== 光尘参数 ==========
 const CONFIG = {
-  COUNT: 5,
-  SIZE_MIN: 2,
-  SIZE_MAX: 8,
-  SPEED_MIN: 0.08,
-  SPEED_MAX: 0.22,
+  COUNT: 10,
+  SIZE_MIN: 3,
+  SIZE_MAX: 14,
+  SPEED_MIN: 0.06,
+  SPEED_MAX: 0.25,
   SWAY_MIN: 0.15,
-  SWAY_MAX: 0.5,
-  OPACITY_MIN: 0.15,
-  OPACITY_MAX: 0.45,
+  SWAY_MAX: 0.7,
+  OPACITY_MIN: 0.2,
+  OPACITY_MAX: 0.6,
   COLORS: [
     'rgba(255, 248, 210, 0)',   // 暖白
-    'rgba(255, 245, 195, 0)',   // 金色光
+    'rgba(255, 242, 180, 0)',   // 暖金
     'rgba(252, 250, 240, 0)',   // 米白
+    'rgba(255, 235, 160, 0)',   // 琥珀金
   ],
 };
 

@@ -9,6 +9,30 @@ const { Title } = Typography;
 
 const FOREST_URL = '/forest.jpg';
 
+// ========== CSS 动画（注入到组件中） ==========
+const ANIMATION_STYLES = `
+  @keyframes titleFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  @keyframes titleGlow {
+    0%, 100% { text-shadow: 0 0 20px rgba(255,248,210,0.3), 0 0 40px rgba(255,242,180,0.15), 0 2px 12px rgba(0,0,0,0.08); }
+    50% { text-shadow: 0 0 30px rgba(255,248,210,0.5), 0 0 60px rgba(255,242,180,0.25), 0 2px 12px rgba(0,0,0,0.08); }
+  }
+  @keyframes btnPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,248,210,0.4), 0 4px 16px rgba(45,80,22,0.2); }
+    50% { box-shadow: 0 0 0 8px rgba(255,248,210,0), 0 4px 20px rgba(45,80,22,0.35); }
+  }
+  @keyframes subtitleFadeIn {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes btnFadeIn {
+    0% { opacity: 0; transform: translateY(16px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+`;
+
 // ========== 色彩体系 ==========
 const COLORS = {
   title: '#2d5016',
@@ -243,6 +267,9 @@ export default function LoginPage() {
         position: 'relative',
       }}
     >
+      {/* CSS 动画注入 */}
+      <style>{ANIMATION_STYLES}</style>
+
       {/* 第 1 层：森林背景 */}
       <div
         style={{
@@ -300,53 +327,66 @@ export default function LoginPage() {
           textAlign: 'center',
         }}
       >
+        {/* 标题：浮动 + 呼吸光晕 */}
         <Title
           style={{
-            fontSize: 64,
+            fontSize: 72,
             fontWeight: 800,
             color: COLORS.title,
-            letterSpacing: 12,
-            marginBottom: 8,
-            textShadow: '0 2px 12px rgba(0,0,0,0.08)',
+            letterSpacing: 16,
+            marginBottom: 4,
+            textShadow: '0 0 20px rgba(255,248,210,0.3), 0 0 40px rgba(255,242,180,0.15), 0 2px 12px rgba(0,0,0,0.08)',
+            animation: 'titleFloat 4s ease-in-out infinite, titleGlow 3s ease-in-out infinite',
           }}
         >
           剧匠
         </Title>
 
+        {/* 英文副标题：衬线花体 + 渐入动画 */}
         <div
           style={{
-            fontSize: 16,
-            color: COLORS.text,
-            letterSpacing: 1,
-            marginBottom: 48,
+            fontSize: 18,
+            fontWeight: 700,
+            fontFamily: '"Georgia", "Times New Roman", "Noto Serif SC", serif',
             fontStyle: 'italic',
+            color: COLORS.text,
+            letterSpacing: 0.5,
+            marginBottom: 56,
+            animation: 'subtitleFadeIn 1.2s ease-out 0.3s both',
           }}
         >
           The writer&apos;s vocation is to make the unknown known
         </div>
 
+        {/* 按钮：毛玻璃清透效果 + 脉冲呼吸 */}
         <Button
           size="large"
           onClick={handleStart}
           style={{
-            padding: '0 48px',
-            height: 48,
+            padding: '0 56px',
+            height: 50,
             fontSize: 18,
             fontWeight: 600,
-            background: COLORS.primaryBtn,
-            borderColor: COLORS.primaryBtn,
-            color: '#fff',
-            borderRadius: 24,
-            letterSpacing: 4,
-            boxShadow: '0 4px 16px rgba(45,80,22,0.3)',
+            background: 'rgba(255,255,252,0.25)',
+            border: '1.5px solid rgba(255,255,255,0.45)',
+            color: COLORS.title,
+            borderRadius: 25,
+            letterSpacing: 6,
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            boxShadow: '0 4px 16px rgba(45,80,22,0.2)',
+            animation: 'btnPulse 3s ease-in-out infinite, btnFadeIn 0.8s ease-out 0.6s both',
+            transition: 'all 0.3s ease',
           }}
           onMouseEnter={(e) => {
-            e.target.style.background = COLORS.primaryHover;
-            e.target.style.borderColor = COLORS.primaryHover;
+            e.target.style.background = 'rgba(255,255,252,0.45)';
+            e.target.style.borderColor = 'rgba(255,255,255,0.7)';
+            e.target.style.boxShadow = '0 4px 24px rgba(45,80,22,0.35)';
           }}
           onMouseLeave={(e) => {
-            e.target.style.background = COLORS.primaryBtn;
-            e.target.style.borderColor = COLORS.primaryBtn;
+            e.target.style.background = 'rgba(255,255,252,0.25)';
+            e.target.style.borderColor = 'rgba(255,255,255,0.45)';
+            e.target.style.boxShadow = '0 4px 16px rgba(45,80,22,0.2)';
           }}
         >
           开始创作
