@@ -29,7 +29,8 @@ func (h *ScriptHandler) Convert(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	task, err := h.svc.ConvertNovel(req.NovelText, req.Format, req.Style)
+	userID := c.GetString("userID")
+	task, err := h.svc.ConvertNovel(req.NovelText, req.Format, req.Style, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -45,7 +46,9 @@ func (h *ScriptHandler) Convert(c *gin.Context) {
 // GET /v1/task/:id
 func (h *ScriptHandler) GetTask(c *gin.Context) {
 	id := c.Param("id")
-	task, err := h.svc.GetTask(id)
+	userID := c.GetString("userID")
+	role := c.GetString("role")
+	task, err := h.svc.GetTask(id, userID, role)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -66,7 +69,9 @@ func (h *ScriptHandler) GetTask(c *gin.Context) {
 // GET /v1/script/:id
 func (h *ScriptHandler) GetScript(c *gin.Context) {
 	id := c.Param("id")
-	yaml, err := h.svc.GetScript(id)
+	userID := c.GetString("userID")
+	role := c.GetString("role")
+	yaml, err := h.svc.GetScript(id, userID, role)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -79,7 +84,9 @@ func (h *ScriptHandler) GetScript(c *gin.Context) {
 // GET /v1/script/:id/characters
 func (h *ScriptHandler) GetCharacters(c *gin.Context) {
 	id := c.Param("id")
-	characters, err := h.svc.GetCharacters(id)
+	userID := c.GetString("userID")
+	role := c.GetString("role")
+	characters, err := h.svc.GetCharacters(id, userID, role)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -91,7 +98,9 @@ func (h *ScriptHandler) GetCharacters(c *gin.Context) {
 // GET /v1/script/:id/scenes
 func (h *ScriptHandler) GetScenes(c *gin.Context) {
 	id := c.Param("id")
-	scenes, err := h.svc.GetScenes(id)
+	userID := c.GetString("userID")
+	role := c.GetString("role")
+	scenes, err := h.svc.GetScenes(id, userID, role)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -107,7 +116,7 @@ func (h *ScriptHandler) HealthCheck(c *gin.Context) {
 // AdminListTasks 管理员查看所有任务
 // GET /v1/admin/tasks
 func (h *ScriptHandler) AdminListTasks(c *gin.Context) {
-	tasks, err := h.svc.ListTasks()
+	tasks, err := h.svc.ListAllTasks()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -28,7 +28,7 @@ func NewScriptService(
 }
 
 // ConvertNovel 创建任务（pending）并立即返回 task_id；启动 goroutine 后台调 AI。
-func (s *ScriptService) ConvertNovel(novelText, format, style string) (*model.Task, error) {
+func (s *ScriptService) ConvertNovel(novelText, format, style, userID string) (*model.Task, error) {
 	if novelText == "" {
 		return nil, fmt.Errorf("novel_text 不能为空")
 	}
@@ -41,6 +41,7 @@ func (s *ScriptService) ConvertNovel(novelText, format, style string) (*model.Ta
 
 	task := &model.Task{
 		ID:        uuid.New().String(),
+		UserID:    userID,
 		NovelText: novelText,
 		Format:    format,
 		Style:     style,
@@ -57,9 +58,15 @@ func (s *ScriptService) ConvertNovel(novelText, format, style string) (*model.Ta
 	return task, nil
 }
 
-// GetTask 查询任务状态
-func (s *ScriptService) GetTask(id string) (*model.Task, error) {
-	task, err := s.taskRepo.GetByID(id)
+// GetTask 查询任务状态，admin 可查任意，普通用户只能查自己的
+func (s *ScriptService) GetTask(id, userID, role string) (*model.Task, error) {
+	var task *model.Task
+	var err error
+	if role == "admin" {
+		task, err = s.taskRepo.GetByID(id)
+	} else {
+		task, err = s.taskRepo.GetByIDAndUser(id, userID)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("任务不存在: %w", err)
 	}
@@ -67,10 +74,10 @@ func (s *ScriptService) GetTask(id string) (*model.Task, error) {
 }
 
 // GetScript 获取转换完成的 YAML 剧本
-func (s *ScriptService) GetScript(id string) (string, error) {
-	task, err := s.taskRepo.GetByID(id)
+func (s *ScriptService) GetScript(id, userID, role string) (string, error) {
+	task, err := s.GetTask(id, userID, role)
 	if err != nil {
-		return "", fmt.Errorf("任务不存在: %w", err)
+		return "", err
 	}
 	if task.Status == "pending" || task.Status == "processing" {
 		return "", fmt.Errorf("任务尚未完成,当前状态: %s", task.Status)
@@ -85,7 +92,11 @@ func (s *ScriptService) GetScript(id string) (string, error) {
 }
 
 // GetCharacters 获取角色列表
-func (s *ScriptService) GetCharacters(taskID string) (json.RawMessage, error) {
+func (s *ScriptService) GetCharacters(taskID, userID, role string) (json.RawMessage, error) {
+	// 先校验任务归属
+	if _, err := s.GetTask(taskID, userID, role); err != nil {
+		return nil, err
+	}
 	script, err := s.scriptRepo.GetByTaskID(taskID)
 	if err != nil {
 		return nil, fmt.Errorf("剧本数据不存在: %w", err)
@@ -97,7 +108,11 @@ func (s *ScriptService) GetCharacters(taskID string) (json.RawMessage, error) {
 }
 
 // GetScenes 获取场景列表
-func (s *ScriptService) GetScenes(taskID string) (json.RawMessage, error) {
+func (s *ScriptService) GetScenes(taskID, userID, role string) (json.RawMessage, error) {
+	// 先校验任务归属
+	if _, err := s.GetTask(taskID, userID, role); err != nil {
+		return nil, err
+	}
 	script, err := s.scriptRepo.GetByTaskID(taskID)
 	if err != nil {
 		return nil, fmt.Errorf("剧本数据不存在: %w", err)
@@ -108,9 +123,14 @@ func (s *ScriptService) GetScenes(taskID string) (json.RawMessage, error) {
 	return script.Scenes, nil
 }
 
-// ListTasks 获取所有任务（管理后台用）
-func (s *ScriptService) ListTasks() ([]*model.Task, error) {
-	return s.taskRepo.List()
+// ListAllTasks 获取所有任务（管理后台用）
+func (s *ScriptService) ListAllTasks() ([]*model.Task, error) {
+	return s.taskRepo.ListAll()
+}
+
+// ListTasksByUser 获取用户的任务列表
+func (s *ScriptService) ListTasksByUser(userID string) ([]*model.Task, error) {
+	return s.taskRepo.ListByUser(userID)
 }
 
 // processInBackground 后台处理：processing → 调 AI → 解析 YAML 存 Script → completed/failed

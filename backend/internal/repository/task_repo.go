@@ -27,9 +27,24 @@ func (r *TaskRepository) GetByID(id string) (*model.Task, error) {
 	return &task, nil
 }
 
-func (r *TaskRepository) List() ([]*model.Task, error) {
+func (r *TaskRepository) GetByIDAndUser(id, userID string) (*model.Task, error) {
+	var task model.Task
+	err := r.db.First(&task, "id = ? AND user_id = ?", id, userID).Error
+	if err != nil {
+		return nil, err
+	}
+	return &task, nil
+}
+
+func (r *TaskRepository) ListAll() ([]*model.Task, error) {
 	var tasks []*model.Task
 	err := r.db.Order("created_at DESC").Find(&tasks).Error
+	return tasks, err
+}
+
+func (r *TaskRepository) ListByUser(userID string) ([]*model.Task, error) {
+	var tasks []*model.Task
+	err := r.db.Where("user_id = ?", userID).Order("created_at DESC").Find(&tasks).Error
 	return tasks, err
 }
 
