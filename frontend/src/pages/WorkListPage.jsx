@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Button, Typography, message } from 'antd';
+import { Card, Button, Typography, message, Modal } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons';
 import { listWorks, deleteWork } from '../services/work';
 
@@ -28,15 +28,24 @@ export default function WorkListPage() {
     }
   };
 
-  const handleDelete = async (id, e) => {
+  const handleDelete = (work, e) => {
     e.stopPropagation();
-    try {
-      await deleteWork(id);
-      message.success('删除成功');
-      fetchWorks();
-    } catch (err) {
-      message.error('删除失败');
-    }
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除作品「${work.title || '(未命名)'}」吗？该作品下的所有剧本和场景都将被永久删除，此操作不可恢复。`,
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await deleteWork(work.id || work.ID);
+          message.success('删除成功');
+          fetchWorks();
+        } catch (err) {
+          message.error('删除失败');
+        }
+      },
+    });
   };
 
   const getSupportingChars = (work) => {
@@ -139,7 +148,7 @@ export default function WorkListPage() {
                     <Button
                       type="text"
                       icon={<DeleteOutlined />}
-                      onClick={(e) => handleDelete(work.id, e)}
+                      onClick={(e) => handleDelete(work, e)}
                       size="small"
                       danger
                     >
