@@ -573,7 +573,6 @@ export default function WorkDetailPage() {
         </Title>
         <Badge count={`${scripts.length} 集`} style={{ backgroundColor: '#1890ff' }} />
         {work?.genre && <Tag>{work.genre === 'film' ? '电影' : work.genre === 'tv_series' ? '电视剧' : '舞台剧'}</Tag>}
-        {work?.status && <Tag color={work.status === 'draft' ? 'default' : 'green'}>{work.status === 'draft' ? '草稿' : work.status}</Tag>}
       </div>
 
       {/* 作品信息卡：梗概 + 人物小传 */}
