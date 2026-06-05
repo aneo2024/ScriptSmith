@@ -214,6 +214,39 @@ func (h *ScriptHandler) UpdateContent(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
+// AddContent 向剧本的某个场景中添加内容块
+// POST /v1/scripts/:scriptID/scenes/:sceneID/contents
+func (h *ScriptHandler) AddContent(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+	sceneID := c.Param("sceneID")
+
+	var content model.SceneContent
+	if err := c.ShouldBindJSON(&content); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	created, err := h.svc.AddContent(scriptID, sceneID, content)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, created)
+}
+
+// DeleteContent 删除剧本中的某个内容块
+// DELETE /v1/scripts/:scriptID/contents/:contentID
+func (h *ScriptHandler) DeleteContent(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+	contentID := c.Param("contentID")
+
+	if err := h.svc.DeleteContent(scriptID, contentID); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
 // ExportYAML 导出剧本为 YAML 格式
 // GET /v1/scripts/:scriptID/yaml
 func (h *ScriptHandler) ExportYAML(c *gin.Context) {

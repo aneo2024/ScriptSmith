@@ -87,6 +87,8 @@ func main() {
 			auth.PUT("/scripts/:scriptID", h.SaveScript)
 			auth.PUT("/scripts/:scriptID/scenes/:sceneID", h.UpdateScene)
 			auth.PUT("/scripts/:scriptID/contents/:contentID", h.UpdateContent)
+			auth.POST("/scripts/:scriptID/scenes/:sceneID/contents", h.AddContent)
+			auth.DELETE("/scripts/:scriptID/contents/:contentID", h.DeleteContent)
 
 			// 作品 CRUD
 			auth.POST("/works", workH.CreateWork)
