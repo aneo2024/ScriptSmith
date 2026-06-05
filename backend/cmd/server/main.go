@@ -30,7 +30,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
-	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}, &model.Work{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}, &model.Work{}, &model.RefreshToken{}); err != nil {
 		log.Fatalf("迁移表结构失败: %v", err)
 	}
 	log.Printf("数据库已就绪")
@@ -40,9 +40,10 @@ func main() {
 	scriptRepo := repository.NewScriptRepository(db)
 	userRepo := repository.NewUserRepository(db)
 	workRepo := repository.NewWorkRepository(db)
+	refreshTokenRepo := repository.NewRefreshTokenRepository(db)
 	svc := service.NewScriptService(taskRepo, scriptRepo, workRepo, aiClient)
 	h := handler.NewScriptHandler(svc)
-	authH := handler.NewAuthHandler(userRepo)
+	authH := handler.NewAuthHandler(userRepo, refreshTokenRepo)
 	workH := handler.NewWorkHandler(workRepo, scriptRepo, taskRepo)
 
 	r := gin.Default()
@@ -64,6 +65,7 @@ func main() {
 		v1.GET("/health", h.HealthCheck)
 		v1.POST("/auth/register", authH.Register)
 		v1.POST("/auth/login", authH.Login)
+		v1.POST("/auth/refresh", authH.Refresh)
 		v1.GET("/auth/me", middleware.AuthMiddleware(), authH.Me)
 
 		// 需要认证的路由
