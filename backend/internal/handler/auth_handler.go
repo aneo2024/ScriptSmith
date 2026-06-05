@@ -185,6 +185,26 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	})
 }
 
+// Logout 登出 — 撤销指定的刷新令牌
+// POST /v1/auth/logout
+func (h *AuthHandler) Logout(c *gin.Context) {
+	userID := c.GetString("userID")
+
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	// 允许不传 refresh_token（仅清除所有）
+	if err := c.ShouldBindJSON(&req); err == nil && req.RefreshToken != "" {
+		// 尝试消耗单条 token
+		_, _ = h.refreshTokenRepo.ValidateAndConsume(req.RefreshToken)
+	}
+
+	// 撤销该用户所有 refresh token
+	_ = h.refreshTokenRepo.RevokeByUserID(userID)
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
 // Me 获取当前用户信息
 // GET /v1/auth/me
 func (h *AuthHandler) Me(c *gin.Context) {

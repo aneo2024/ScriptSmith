@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"scriptsmith/internal/ai"
@@ -13,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -21,19 +23,38 @@ func main() {
 	_ = godotenv.Load(".env")
 	_ = godotenv.Load("../../.env")
 
-	dbDSN := os.Getenv("DB_DSN")
-	if dbDSN == "" {
-		dbDSN = "postgres://postgres:postgres@localhost:5432/scriptsmith?sslmode=disable"
+	dbType := os.Getenv("DB_TYPE")
+	if dbType == "" {
+		dbType = "sqlite" // 默认用 SQLite 开发
 	}
 
-	db, err := gorm.Open(postgres.Open(dbDSN), &gorm.Config{})
+	var db *gorm.DB
+	var err error
+
+	switch dbType {
+	case "postgres":
+		dsn := os.Getenv("DB_DSN")
+		if dsn == "" {
+			dsn = "postgres://postgres:postgres@localhost:5432/scriptsmith?sslmode=disable"
+		}
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	default:
+		// SQLite
+		dbPath := os.Getenv("DB_PATH")
+		if dbPath == "" {
+			dbPath = "scriptsmith.db"
+		}
+		dsn := fmt.Sprintf("file:%s?cache=shared&_fk=1", dbPath)
+		db, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	}
+
 	if err != nil {
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
 	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}, &model.Work{}, &model.RefreshToken{}); err != nil {
 		log.Fatalf("迁移表结构失败: %v", err)
 	}
-	log.Printf("数据库已就绪")
+	log.Printf("数据库已就绪 (type=%s)", dbType)
 
 	aiClient := ai.NewClient()
 	taskRepo := repository.NewTaskRepository(db)
@@ -72,6 +93,7 @@ func main() {
 		auth := v1.Group("")
 		auth.Use(middleware.AuthMiddleware())
 		{
+			auth.POST("/auth/logout", authH.Logout)
 			auth.POST("/convert", h.Convert)
 			auth.GET("/task/:id", h.GetTask)
 			auth.GET("/script/:id", h.GetScript)
