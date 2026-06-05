@@ -246,14 +246,14 @@ export default function LoginPage() {
 
   const handleStart = () => {
     if (isLoggedIn) {
-      navigate('/works', { replace: true });
+      navigate('/', { replace: true });
     } else {
       setShowLogin(true);
     }
   };
 
   const handleLoginSuccess = () => {
-    navigate('/works', { replace: true });
+    navigate('/', { replace: true });
   };
 
   return (

@@ -1,200 +1,124 @@
-import { useState, useEffect } from 'react';
-import { Layout, Menu, Typography, Divider, Button, Space, message } from 'antd';
-import {
-  BookOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  LogoutOutlined,
-  PlusOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
+import { Layout, Typography, Space, Button } from 'antd';
+import { BookOutlined, PlusOutlined, LogoutOutlined, HomeOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { getWorkStats } from '../services/work';
 
-const { Sider, Content, Header } = Layout;
-const { Title, Text } = Typography;
+const { Header, Content } = Layout;
+const { Text } = Typography;
 
-const menuItems = [
-  { key: '/works', icon: <BookOutlined />, label: '作品列表' },
-];
-
-/** 格式化字数显示，过万显示 "1.2万" */
-function formatWordCount(n) {
-  if (n == null || n === 0) return '0';
-  if (n >= 10000) {
-    return (n / 10000).toFixed(1).replace(/\.0$/, '') + '万';
-  }
-  return n.toLocaleString();
-}
+const COLORS = {
+  primary: '#3a6b28',
+  primaryHover: '#2d5016',
+  headerBg: '#f5f8f3',
+  contentBg: '#f5f8f3',
+};
 
 export default function AppLayout({ children }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const [workCount, setWorkCount] = useState(0);
-  const [totalWords, setTotalWords] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-
-  const selectedKey = menuItems.some((m) => m.key === location.pathname)
-    ? location.pathname
-    : '';
-
-  useEffect(() => {
-    fetchWorkCount();
-  }, []);
-
-  const fetchWorkCount = async () => {
-    try {
-      const result = await getWorkStats();
-      setWorkCount(result.count || 0);
-      setTotalWords(result.total_words || 0);
-    } catch (err) {
-      // 静默失败，不影响用户体验
-    }
-  };
-
-  const handleMenuClick = ({ key }) => navigate(key);
 
   const handleLogout = () => {
     logout();
     navigate('/login', { replace: true });
   };
 
-  const handleCreateWork = () => {
-    navigate('/create-work');
-  };
+  const isActive = (path) => location.pathname === path;
+
+  const navBtnStyle = (path) => ({
+    background: isActive(path) ? COLORS.primary : 'rgba(58,107,40,0.1)',
+    borderColor: isActive(path) ? COLORS.primary : 'rgba(58,107,40,0.2)',
+    color: isActive(path) ? '#fff' : COLORS.primary,
+    fontWeight: isActive(path) ? 600 : 400,
+  });
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        width={220}
-        theme="dark"
+    <Layout style={{ minHeight: '100vh', background: COLORS.contentBg }}>
+      {/* 顶部导航栏 */}
+      <Header
+        style={{
+          background: '#fff',
+          padding: '0 32px',
+          borderBottom: '1px solid rgba(58,107,40,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: 56,
+          lineHeight: '56px',
+          boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
+        }}
       >
-        <div style={{ padding: '16px 20px', height: 64, cursor: 'pointer' }} onClick={() => navigate('/login')}>
-          <Title level={4} style={{ color: '#fff', margin: 0 }}>
-            {collapsed ? '剧' : '剧匠'}
-          </Title>
-          {!collapsed && (
-            <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>
-              ScriptSmith
-            </Text>
-          )}
-        </div>
-        {!collapsed && (
-          <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: '50%',
-                  background: '#1890ff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: 12,
-                }}
-              >
-                <UserOutlined style={{ fontSize: 24, color: '#fff' }} />
-              </div>
-              <Text style={{ color: '#fff', fontWeight: 500 }}>{user?.username}</Text>
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-around',
-                marginTop: 16,
-                paddingTop: 12,
-                borderTop: '1px solid rgba(255,255,255,0.1)',
-              }}
-            >
-              <div style={{ textAlign: 'center' }}>
-                <Text style={{ color: '#fff', fontSize: 18, fontWeight: 600 }}>{workCount}</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>作品数</Text>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <Text style={{ color: '#fff', fontSize: 18, fontWeight: 600 }}>{formatWordCount(totalWords)}</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>字数</Text>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <Text style={{ color: '#fff', fontSize: 18, fontWeight: 600 }}>-</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>访客</Text>
-              </div>
-            </div>
-          </div>
-        )}
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          items={menuItems}
-          onClick={handleMenuClick}
-        />
-        {!collapsed && <Divider style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '8px 0' }} />}
-        {!collapsed && (
-          <div style={{ padding: '0 16px' }}>
+        {/* 左侧：Logo + 导航按钮 */}
+        <Space size={16}>
+          <Text
+            strong
+            style={{
+              fontSize: 18,
+              color: COLORS.primary,
+              cursor: 'pointer',
+              letterSpacing: 2,
+              fontFamily: '"Georgia", "Noto Serif SC", serif',
+            }}
+            onClick={() => navigate('/')}
+          >
+            剧匠
+          </Text>
+
+          <Button
+            icon={<HomeOutlined />}
+            size="middle"
+            onClick={() => navigate('/')}
+            style={navBtnStyle('/')}
+          >
+            首页
+          </Button>
+
+          <Button
+            icon={<BookOutlined />}
+            size="middle"
+            onClick={() => navigate('/works')}
+            style={navBtnStyle('/works')}
+          >
+            作品列表
+          </Button>
+
+          <Button
+            icon={<PlusOutlined />}
+            size="middle"
+            onClick={() => navigate('/create-work')}
+            style={navBtnStyle('/create-work')}
+          >
+            创作新作品
+          </Button>
+        </Space>
+
+        {/* 右侧：用户信息 + 退出 */}
+        {user && (
+          <Space size={12}>
+            <Text style={{ color: '#7a9a6a', fontSize: 13 }}>{user.username}</Text>
             <Button
-              type="primary"
-              block
-              icon={<PlusOutlined />}
-              onClick={handleCreateWork}
-              style={{ marginBottom: 16 }}
+              type="text"
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+              size="small"
+              style={{ color: '#7a9a6a' }}
             >
-              创作新作品
+              退出
             </Button>
-          </div>
-        )}
-      </Sider>
-      <Layout>
-        <Header
-          style={{
-            background: '#fff',
-            padding: '0 24px',
-            borderBottom: '1px solid #f0f0f0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Space>
-            <span
-              onClick={() => setCollapsed(!collapsed)}
-              style={{ cursor: 'pointer', fontSize: 18 }}
-            >
-              {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            </span>
-            <Text strong style={{ fontSize: 16, cursor: 'pointer' }} onClick={() => navigate('/login')}>
-              剧匠 ScriptSmith
-            </Text>
           </Space>
-          {user && (
-            <Space>
-              <Text type="secondary">{user.username}</Text>
-              <Button
-                type="text"
-                icon={<LogoutOutlined />}
-                onClick={handleLogout}
-                size="small"
-              >
-                退出
-              </Button>
-            </Space>
-          )}
-        </Header>
-        <Content
-          style={{
-            padding: 24,
-            background: '#f5f5f5',
-            minHeight: 'calc(100vh - 64px)',
-          }}
-        >
-          {children}
-        </Content>
-      </Layout>
+        )}
+      </Header>
+
+      {/* 内容区 */}
+      <Content
+        style={{
+          padding: 24,
+          background: COLORS.contentBg,
+          minHeight: 'calc(100vh - 56px)',
+        }}
+      >
+        {children}
+      </Content>
     </Layout>
   );
 }
