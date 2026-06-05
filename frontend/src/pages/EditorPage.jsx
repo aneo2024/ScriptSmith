@@ -5,6 +5,7 @@ import { ArrowLeftOutlined } from '@ant-design/icons';
 import SceneNav from '../components/SceneNav';
 import SceneCard from '../components/SceneCard';
 import useScriptStore from '../store/scriptStore';
+import { useTask } from '../hooks/useTask';
 import { getScriptByTaskId } from '../services/api';
 import '../styles/script-editor.css';
 
@@ -43,6 +44,7 @@ export default function EditorPage() {
   const loadScript = useScriptStore((s) => s.loadScript);
   const setScript = useScriptStore((s) => s.setScript);
   const script = useScriptStore((s) => s.script);
+  const { reset } = useTask();
 
   useEffect(() => {
     if (scriptId) {
@@ -72,7 +74,10 @@ export default function EditorPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/')}
+            onClick={() => {
+              reset();
+              navigate('/');
+            }}
           >
             返回
           </Button>

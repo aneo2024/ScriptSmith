@@ -23,20 +23,35 @@ const styleOptions = [
 
 export default function NovelInputPage() {
   const navigate = useNavigate();
-  const { submit, status, progress, error, isActive, yaml, taskId } = useTask();
+  const { submit, status, progress, error, isActive, yaml, taskId, reset } = useTask();
 
-  const [novelText, setNovelText] = useState('');
+  const [novelText, setNovelText] = useState(() => {
+    // 页面加载时恢复上次未提交的小说文本
+    try {
+      return localStorage.getItem('novel_draft') || '';
+    } catch {
+      return '';
+    }
+  });
   const [format, setFormat] = useState('film');
   const [style, setStyle] = useState('faithful');
 
   const charCount = novelText.length;
 
-  // When conversion completes, auto-navigate to editor with taskId
+  // 自动跳转前先清空草稿（任务已完成）
   useEffect(() => {
     if (status === 'completed' && yaml && taskId) {
+      try { localStorage.removeItem('novel_draft'); } catch {}
       navigate(`/editor?taskId=${taskId}`);
     }
   }, [status, yaml, taskId, navigate]);
+
+  // 输入框内容变化时自动保存草稿
+  const handleTextChange = (e) => {
+    const val = e.target.value;
+    setNovelText(val);
+    try { localStorage.setItem('novel_draft', val); } catch {}
+  };
 
   const handleSubmit = async () => {
     if (!novelText.trim()) {
@@ -52,6 +67,7 @@ export default function NovelInputPage() {
 
   const handleClear = () => {
     setNovelText('');
+    try { localStorage.removeItem('novel_draft'); } catch {}
   };
 
   const isPolling = isActive || status === 'submitting';
@@ -73,7 +89,7 @@ export default function NovelInputPage() {
 
       <TextArea
         value={novelText}
-        onChange={(e) => setNovelText(e.target.value)}
+        onChange={handleTextChange}
         placeholder="在此粘贴或输入小说文本…"
         rows={16}
         maxLength={MAX_CHARS}
