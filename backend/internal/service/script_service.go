@@ -104,7 +104,7 @@ func (s *ScriptService) GetCharacters(taskID, userID, role string) (json.RawMess
 	if len(script.Characters) == 0 || string(script.Characters) == "null" {
 		return json.RawMessage("[]"), nil
 	}
-	return script.Characters, nil
+	return json.RawMessage(script.Characters), nil
 }
 
 // GetScenes 获取场景列表
@@ -120,7 +120,7 @@ func (s *ScriptService) GetScenes(taskID, userID, role string) (json.RawMessage,
 	if len(script.Scenes) == 0 || string(script.Scenes) == "null" {
 		return json.RawMessage("[]"), nil
 	}
-	return script.Scenes, nil
+	return json.RawMessage(script.Scenes), nil
 }
 
 // ListAllTasks 获取所有任务（管理后台用）
