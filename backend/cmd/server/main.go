@@ -44,7 +44,7 @@ func main() {
 	scriptRepo := repository.NewScriptRepository(db)
 	userRepo := repository.NewUserRepository(db)
 	workRepo := repository.NewWorkRepository(db)
-	svc := service.NewScriptService(taskRepo, scriptRepo, aiClient)
+	svc := service.NewScriptService(taskRepo, scriptRepo, workRepo, aiClient)
 	h := handler.NewScriptHandler(svc)
 	authH := handler.NewAuthHandler(userRepo)
 	workH := handler.NewWorkHandler(workRepo)
@@ -91,6 +91,7 @@ func main() {
 			// 作品 CRUD
 			auth.POST("/works", workH.CreateWork)
 			auth.GET("/works", workH.ListWorks)
+			auth.GET("/works/stats", workH.GetStats)
 			auth.GET("/works/count", workH.GetWorkCount)
 			auth.GET("/works/:id", workH.GetWork)
 			auth.PUT("/works/:id", workH.UpdateWork)

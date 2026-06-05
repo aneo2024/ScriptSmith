@@ -10,7 +10,7 @@ import {
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { getWorkCount } from '../services/work';
+import { getWorkStats } from '../services/work';
 
 const { Sider, Content, Header } = Layout;
 const { Title, Text } = Typography;
@@ -19,9 +19,19 @@ const menuItems = [
   { key: '/works', icon: <BookOutlined />, label: '作品列表' },
 ];
 
+/** 格式化字数显示，过万显示 "1.2万" */
+function formatWordCount(n) {
+  if (n == null || n === 0) return '0';
+  if (n >= 10000) {
+    return (n / 10000).toFixed(1).replace(/\.0$/, '') + '万';
+  }
+  return n.toLocaleString();
+}
+
 export default function AppLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
   const [workCount, setWorkCount] = useState(0);
+  const [totalWords, setTotalWords] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -36,8 +46,9 @@ export default function AppLayout({ children }) {
 
   const fetchWorkCount = async () => {
     try {
-      const result = await getWorkCount();
+      const result = await getWorkStats();
       setWorkCount(result.count || 0);
+      setTotalWords(result.total_words || 0);
     } catch (err) {
       // 静默失败，不影响用户体验
     }
@@ -106,7 +117,7 @@ export default function AppLayout({ children }) {
                 <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>作品数</Text>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <Text style={{ color: '#fff', fontSize: 18, fontWeight: 600 }}>-</Text>
+                <Text style={{ color: '#fff', fontSize: 18, fontWeight: 600 }}>{formatWordCount(totalWords)}</Text>
                 <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>字数</Text>
               </div>
               <div style={{ textAlign: 'center' }}>

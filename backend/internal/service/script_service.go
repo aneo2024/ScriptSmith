@@ -16,15 +16,17 @@ import (
 type ScriptService struct {
 	taskRepo   *repository.TaskRepository
 	scriptRepo *repository.ScriptRepository
+	workRepo   *repository.WorkRepository
 	aiClient   *ai.Client
 }
 
 func NewScriptService(
 	taskRepo *repository.TaskRepository,
 	scriptRepo *repository.ScriptRepository,
+	workRepo *repository.WorkRepository,
 	aiClient *ai.Client,
 ) *ScriptService {
-	return &ScriptService{taskRepo: taskRepo, scriptRepo: scriptRepo, aiClient: aiClient}
+	return &ScriptService{taskRepo: taskRepo, scriptRepo: scriptRepo, workRepo: workRepo, aiClient: aiClient}
 }
 
 // ConvertNovel 创建任务（pending）并立即返回 task_id；启动 goroutine 后台调 AI。
@@ -185,6 +187,14 @@ func (s *ScriptService) processInBackground(taskID, workID string) {
 		log.Printf("[task %s] 更新 completed 状态失败: %v", taskID, err)
 		return
 	}
+
+	// 如果关联了作品，累加字数
+	if workID != "" {
+		if err := s.workRepo.AddWordCount(workID, len(task.NovelText)); err != nil {
+			log.Printf("[task %s] 更新作品字数失败: %v", taskID, err)
+		}
+	}
+
 	log.Printf("[task %s] 转换完成，Script ID: %s", taskID, script.ID)
 }
 

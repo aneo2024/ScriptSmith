@@ -52,3 +52,24 @@ func (r *WorkRepository) CountByUserID(userID string) (int64, error) {
 	}
 	return count, nil
 }
+
+func (r *WorkRepository) StatsByUserID(userID string) (count int64, totalWords int64, err error) {
+	type stats struct {
+		Count      int64
+		TotalWords int64
+	}
+	var s stats
+	err = r.db.Model(&model.Work{}).
+		Select("COUNT(*) as count, COALESCE(SUM(word_count), 0) as total_words").
+		Where("user_id = ?", userID).
+		Scan(&s).Error
+	if err != nil {
+		return 0, 0, err
+	}
+	return s.Count, s.TotalWords, nil
+}
+
+func (r *WorkRepository) AddWordCount(id string, add int) error {
+	return r.db.Model(&model.Work{}).Where("id = ?", id).
+		Update("word_count", gorm.Expr("word_count + ?", add)).Error
+}
