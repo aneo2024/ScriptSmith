@@ -94,7 +94,7 @@
 
 /* 动作描述 */
 .action-text {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 14px;
   line-height: 1.6;
   text-align: justify;
@@ -107,7 +107,7 @@
 }
 
 .character-name {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 14px;
   font-weight: bold;
   text-transform: uppercase;
@@ -116,7 +116,7 @@
 }
 
 .parenthetical {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 12px;
   text-align: center;
   font-style: italic;
@@ -124,7 +124,7 @@
 }
 
 .dialogue-text {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 14px;
   line-height: 1.6;
   text-align: left;
@@ -132,7 +132,7 @@
 
 /* 转场 */
 .transition-text {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 14px;
   text-align: right;
   text-transform: uppercase;
@@ -141,7 +141,7 @@
 
 /* 音效 */
 .sound-text {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 12px;
   color: #666;
   font-style: italic;
@@ -164,7 +164,7 @@
   border: none;
   outline: none;
   background: transparent;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 14px;
   line-height: 1.6;
   resize: vertical;
@@ -176,6 +176,15 @@
   text-transform: uppercase;
   text-align: center;
   font-size: 14px;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+}
+
+.parenthetical-input {
+  font-style: italic;
+  text-align: center;
+  font-size: 12px;
+  color: #888;
   margin-bottom: 8px;
   padding: 4px 8px;
 }
@@ -238,7 +247,7 @@
   border: 1px solid #d9d9d9;
   border-radius: 4px;
   font-size: 13px;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   background: #fff;
   cursor: pointer;
 }
@@ -253,7 +262,7 @@
   border: 1px solid #d9d9d9;
   border-radius: 4px;
   font-size: 13px;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   width: 120px;
 }
 

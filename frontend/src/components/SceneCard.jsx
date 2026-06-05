@@ -8,6 +8,7 @@ import '../styles/scene-card.css';
 function ContentEdit({ item, onSave, onCancel }) {
   const [text, setText] = useState(item.text || item.description || '');
   const [characterName, setCharacterName] = useState(item.character_name || '');
+  const [parenthetical, setParenthetical] = useState(item.parenthetical || '');
   const containerRef = useRef(null);
 
   // 打开编辑时自动聚焦到台词/内容区域（非角色名）
@@ -30,6 +31,7 @@ function ContentEdit({ item, onSave, onCancel }) {
     if (item.type === 'dialogue') {
       updated.text = text;
       updated.character_name = characterName;
+      updated.parenthetical = parenthetical;
     } else if (item.type === 'action') {
       updated.description = text;
     } else if (item.type === 'transition') {
@@ -51,6 +53,13 @@ function ContentEdit({ item, onSave, onCancel }) {
           onChange={(e) => setCharacterName(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="角色名"
+        />
+        <input
+          className="edit-input parenthetical-input"
+          value={parenthetical}
+          onChange={(e) => setParenthetical(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="表演提示，如：激动地、低声"
         />
         <textarea
           className="edit-input dialogue-edit"
