@@ -1,5 +1,5 @@
 # 前端 — 多阶段构建
-FROM node:22-alpine AS build
+FROM node:20-alpine AS build
 
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./

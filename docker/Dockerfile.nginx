@@ -1,5 +1,5 @@
 # Nginx + 前端 — 多阶段构建
-FROM node:22-alpine AS frontend-build
+FROM node:20-alpine AS frontend-build
 
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
