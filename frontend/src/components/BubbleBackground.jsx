@@ -10,21 +10,21 @@ const CONFIG = {
   SPEED_MAX: 0.6,
   SWAY_MIN: 0.3,
   SWAY_MAX: 0.8,
-  OPACITY_MIN: 0.15,
-  OPACITY_MAX: 0.25,
+  OPACITY_MIN: 0.25,
+  OPACITY_MAX: 0.40,
   FLEE_RADIUS: 120,         // 鼠标影响半径
   FLEE_STRENGTH: 0.8,       // 逃逸力度
   COLORS: [
-    'hsla(340, 60%, 80%, 0)',    // 淡粉
-    'hsla(350, 55%, 82%, 0)',    // 淡粉
-    'hsla(200, 60%, 82%, 0)',    // 淡蓝
-    'hsla(210, 55%, 80%, 0)',    // 淡蓝
-    'hsla(270, 50%, 85%, 0)',    // 淡紫
-    'hsla(280, 45%, 84%, 0)',    // 淡紫
-    'hsla(50, 55%, 82%, 0)',     // 淡黄
-    'hsla(45, 50%, 84%, 0)',     // 淡黄
-    'hsla(160, 45%, 82%, 0)',    // 淡绿
-    'hsla(10, 55%, 83%, 0)',     // 淡橙
+    'hsla(340, 70%, 78%, 0)',    // 淡粉
+    'hsla(350, 65%, 80%, 0)',    // 淡粉
+    'hsla(200, 70%, 80%, 0)',    // 淡蓝
+    'hsla(210, 65%, 78%, 0)',    // 淡蓝
+    'hsla(270, 60%, 83%, 0)',    // 淡紫
+    'hsla(280, 55%, 82%, 0)',    // 淡紫
+    'hsla(50, 65%, 80%, 0)',     // 淡黄
+    'hsla(45, 60%, 82%, 0)',     // 淡黄
+    'hsla(160, 55%, 80%, 0)',    // 淡绿
+    'hsla(10, 65%, 81%, 0)',     // 淡橙
   ],
 };
 
@@ -104,10 +104,10 @@ class Bubble {
     );
     gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
     gradient.addColorStop(0.15, 'rgba(255, 255, 255, 0.6)');
-    gradient.addColorStop(0.4, this.color.replace('0)', '0.35)'));
-    gradient.addColorStop(0.7, this.color.replace('0)', '0.15)'));
-    gradient.addColorStop(0.9, this.color.replace('0)', '0.06)'));
-    gradient.addColorStop(1, 'rgba(255, 255, 255, 0.02)');
+    gradient.addColorStop(0.4, this.color.replace('0)', '0.5)'));
+    gradient.addColorStop(0.7, this.color.replace('0)', '0.22)'));
+    gradient.addColorStop(0.9, this.color.replace('0)', '0.1)'));
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0.04)');
 
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
