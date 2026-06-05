@@ -134,6 +134,15 @@ function SceneCard({ scene, index }) {
         </div>
       )}
 
+      {scene.mood && (
+        <div style={{ marginBottom: 8 }}>
+          <HeatMapOutlined style={{ marginRight: 4 }} />
+          <Text style={{ fontSize: 13, color: '#555', fontStyle: 'italic' }}>
+            {scene.mood}
+          </Text>
+        </div>
+      )}
+
       {Object.keys(contentStats).length > 0 && (
         <div>
           {Object.entries(contentStats).map(([type, count]) => (
