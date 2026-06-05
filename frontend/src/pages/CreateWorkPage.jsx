@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -18,6 +18,7 @@ import {
 } from '@ant-design/icons';
 import { useTask } from '../hooks/useTask';
 import TaskProgress from '../components/TaskProgress';
+import { createWork } from '../services/work';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -41,8 +42,29 @@ export default function CreateWorkPage() {
   const [uploading, setUploading] = useState(false);
   const [format, setFormat] = useState('film');
   const [style, setStyle] = useState('faithful');
+  const [workCreated, setWorkCreated] = useState(false);
+  const savedRef = useRef(false);
+  const pendingWorkRef = useRef({ title: '', genre: 'film', wordCount: 0 });
   const navigate = useNavigate();
-  const { submit, status, progress, error, isActive, taskId, yaml } = useTask();
+  const { submit, status, progress, error, isActive, taskId } = useTask();
+
+  // AI 生成完成后自动创建作品记录
+  useEffect(() => {
+    if (status === 'completed' && taskId && !savedRef.current) {
+      savedRef.current = true;
+      const { title, genre, wordCount } = pendingWorkRef.current;
+      createWork({
+        title,
+        summary: '',
+        genre,
+        main_char: '',
+        supporting_chars: [],
+        word_count: wordCount,
+      })
+        .then(() => setWorkCreated(true))
+        .catch((err) => console.error('保存作品失败:', err));
+    }
+  }, [status, taskId]);
 
   const handleFileUpload = useCallback(async (file) => {
     setUploading(true);
@@ -72,6 +94,13 @@ export default function CreateWorkPage() {
       message.warning('请输入或上传小说文本');
       return;
     }
+    savedRef.current = false;
+    setWorkCreated(false);
+    pendingWorkRef.current = {
+      title: workTitle,
+      genre: format,
+      wordCount: novelText.length,
+    };
     await submit(novelText, format, style);
   };
 
@@ -80,10 +109,15 @@ export default function CreateWorkPage() {
       <Card>
         <div style={{ textAlign: 'center', padding: '40px' }}>
           <Title level={3}>剧本生成成功！</Title>
-          <Text type="secondary">正在跳转到剧本工作台...</Text>
-          <div style={{ marginTop: 20 }}>
+          <Text type="secondary">
+            {workCreated ? '作品已保存到作品列表' : '正在保存作品...'}
+          </Text>
+          <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'center' }}>
             <Button type="primary" onClick={() => navigate(`/editor?taskId=${taskId}`)}>
-              立即查看
+              查看剧本
+            </Button>
+            <Button onClick={() => navigate('/works')}>
+              返回作品列表
             </Button>
           </div>
         </div>
