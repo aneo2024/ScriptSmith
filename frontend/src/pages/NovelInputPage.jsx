@@ -23,7 +23,7 @@ const styleOptions = [
 
 export default function NovelInputPage() {
   const navigate = useNavigate();
-  const { submit, status, progress, error, isActive, yaml } = useTask();
+  const { submit, status, progress, error, isActive, yaml, taskId } = useTask();
 
   const [novelText, setNovelText] = useState('');
   const [format, setFormat] = useState('film');
@@ -31,12 +31,12 @@ export default function NovelInputPage() {
 
   const charCount = novelText.length;
 
-  // When conversion completes, auto-navigate to editor
+  // When conversion completes, auto-navigate to editor with taskId
   useEffect(() => {
-    if (status === 'completed' && yaml) {
-      navigate('/editor');
+    if (status === 'completed' && yaml && taskId) {
+      navigate(`/editor?taskId=${taskId}`);
     }
-  }, [status, yaml, navigate]);
+  }, [status, yaml, taskId, navigate]);
 
   const handleSubmit = async () => {
     if (!novelText.trim()) {
