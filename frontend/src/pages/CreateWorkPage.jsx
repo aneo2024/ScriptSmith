@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -42,29 +42,9 @@ export default function CreateWorkPage() {
   const [uploading, setUploading] = useState(false);
   const [format, setFormat] = useState('film');
   const [style, setStyle] = useState('faithful');
-  const [workCreated, setWorkCreated] = useState(false);
-  const savedRef = useRef(false);
-  const pendingWorkRef = useRef({ title: '', genre: 'film', wordCount: 0 });
+  const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
   const { submit, status, progress, error, isActive, taskId } = useTask();
-
-  // AI 生成完成后自动创建作品记录
-  useEffect(() => {
-    if (status === 'completed' && taskId && !savedRef.current) {
-      savedRef.current = true;
-      const { title, genre, wordCount } = pendingWorkRef.current;
-      createWork({
-        title,
-        summary: '',
-        genre,
-        main_char: '',
-        supporting_chars: [],
-        word_count: wordCount,
-      })
-        .then(() => setWorkCreated(true))
-        .catch((err) => console.error('保存作品失败:', err));
-    }
-  }, [status, taskId]);
 
   const handleFileUpload = useCallback(async (file) => {
     setUploading(true);
@@ -94,14 +74,26 @@ export default function CreateWorkPage() {
       message.warning('请输入或上传小说文本');
       return;
     }
-    savedRef.current = false;
-    setWorkCreated(false);
-    pendingWorkRef.current = {
-      title: workTitle,
-      genre: format,
-      wordCount: novelText.length,
-    };
-    await submit(novelText, format, style);
+
+    setSaving(true);
+    try {
+      // 1. 先创建作品记录，获取 work_id
+      const work = await createWork({
+        title: workTitle,
+        summary: '',
+        genre: format,
+        main_char: '',
+        supporting_chars: [],
+        word_count: novelText.length,
+      });
+
+      // 2. 提交 AI 转换，传入 work_id
+      await submit(novelText, format, style, work.id);
+    } catch (err) {
+      message.error('创建作品失败: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (status === 'completed' && taskId) {
@@ -109,9 +101,7 @@ export default function CreateWorkPage() {
       <Card>
         <div style={{ textAlign: 'center', padding: '40px' }}>
           <Title level={3}>剧本生成成功！</Title>
-          <Text type="secondary">
-            {workCreated ? '作品已保存到作品列表' : '正在保存作品...'}
-          </Text>
+          <Text type="secondary">作品「{workTitle}」已创建，剧本已自动关联</Text>
           <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'center' }}>
             <Button type="primary" onClick={() => navigate(`/editor?taskId=${taskId}`)}>
               查看剧本
@@ -183,11 +173,11 @@ export default function CreateWorkPage() {
             type="primary"
             icon={<ThunderboltOutlined />}
             block
-            loading={isPolling}
+            loading={isPolling || saving}
             onClick={handleGenerate}
             size="large"
           >
-            AI 生成剧本
+            {saving ? '创建作品中...' : isPolling ? 'AI 生成中...' : 'AI 生成剧本'}
           </Button>
 
           <Button

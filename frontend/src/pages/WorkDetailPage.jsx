@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Tabs, Empty, Table, Tag, Typography, Button, Row, Col, Collapse } from 'antd';
+import {
+  Card,
+  Tabs,
+  Empty,
+  Table,
+  Tag,
+  Typography,
+  Button,
+  Row,
+  Col,
+  Collapse,
+  Spin,
+  Badge,
+} from 'antd';
 import {
   ArrowLeftOutlined,
   UnorderedListOutlined,
@@ -10,12 +23,11 @@ import {
   UserOutlined,
   OrderedListOutlined,
   PlayCircleOutlined,
+  PlusOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { parseScript, characterTypeLabel, characterTypeColor } from '../utils/parseScript';
-import { useTask } from '../hooks/useTask';
-import { getScriptByTaskId } from '../services/api';
-import useScriptStore from '../store/scriptStore';
-import { getWork } from '../services/work';
+import { getWork, listWorkScripts } from '../services/work';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -83,7 +95,11 @@ function SceneCard({ scene, index }) {
       {scene.slugline && (
         <Paragraph style={{ marginBottom: 8 }}>
           <EnvironmentOutlined style={{ marginRight: 4 }} />
-          <Text code>{scene.slugline}</Text>
+          <Text code>
+            {(typeof scene.slugline === 'object'
+              ? `${scene.slugline.type === 'interior' ? '内景' : scene.slugline.type === 'exterior' ? '外景' : ''} · ${scene.slugline.name} · ${scene.slugline.time}`
+              : scene.slugline)}
+          </Text>
         </Paragraph>
       )}
 
@@ -150,7 +166,9 @@ function SceneCard({ scene, index }) {
                           </Paragraph>
                         </div>
                       )}
-                      {(item.type === 'transition' || item.type === 'sound' || item.type === 'note') && (
+                      {(item.type === 'transition' ||
+                        item.type === 'sound' ||
+                        item.type === 'note') && (
                         <Paragraph style={{ margin: 0 }}>
                           {item.text || item.description || ''}
                         </Paragraph>
@@ -171,123 +189,147 @@ export default function WorkDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [work, setWork] = useState(null);
-  const [script, setScript] = useState(null);
+  const [scripts, setScripts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { yaml } = useTask();
-  const setScriptStore = useScriptStore((s) => s.setScript);
+  const [activeScriptId, setActiveScriptId] = useState(null);
 
   useEffect(() => {
-    const loadWork = async () => {
-      try {
-        const data = await getWork(id);
-        setWork(data);
-        if (data.taskId) {
-          const scriptData = await getScriptByTaskId(data.taskId);
-          setScript(scriptData);
-          setScriptStore(scriptData);
-        }
-      } catch (err) {
-        console.error('加载作品数据失败:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadWork();
+    loadData();
   }, [id]);
 
-  const scenes =
-    script?.scenes ||
-    (yaml ? parseScript(yaml).scenes : []) ||
-    [];
-  const characters =
-    script?.characters ||
-    (yaml ? parseScript(yaml).characters : []) ||
-    [];
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [workData, scriptsData] = await Promise.all([
+        getWork(id),
+        listWorkScripts(id),
+      ]);
+      setWork(workData);
+      const list = scriptsData.scripts || [];
+      setScripts(list);
+      if (list.length > 0) {
+        setActiveScriptId(list[0].id);
+      }
+    } catch (err) {
+      console.error('加载作品数据失败:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const renderScenes = () => {
-    if (scenes.length > 0) {
-      return (
-        <div>
-          <Title level={4} style={{ marginBottom: 16 }}>
-            场景列表 ({scenes.length})
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: 80 }}>
+        <Spin size="large" tip="加载中..." />
+      </div>
+    );
+  }
+
+  if (!scripts.length) {
+    return (
+      <div style={{ minHeight: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/works')}>
+            返回作品列表
+          </Button>
+          <Title level={3} style={{ margin: 0 }}>
+            {work?.title || '作品详情'}
           </Title>
-          <Row gutter={[16, 16]}>
-            {scenes.map((scene, idx) => (
-              <Col xs={24} sm={12} lg={8} xl={6} key={scene.id || idx}>
-                <SceneCard scene={scene} index={idx} />
-              </Col>
-            ))}
-          </Row>
         </div>
-      );
-    }
-    return <Empty description="暂无场景数据。请先生成剧本后可在此查看。" />;
-  };
-
-  const renderCharacters = () => {
-    if (characters.length > 0) {
-      return (
-        <Card title={`角色管理 (${characters.length})`}>
-          <Table
-            dataSource={characters.map((c, i) => ({ ...c, key: c.id || i }))}
-            columns={characterColumns}
-            pagination={false}
-            size="middle"
-            locale={{ emptyText: '暂无角色' }}
-          />
-        </Card>
-      );
-    }
-    return <Empty description="暂无角色数据。请先生成剧本后可在此查看。" />;
-  };
-
-  const renderEditor = () => {
-    if (script?.id) {
-      return (
         <Card>
-          <div style={{ textAlign: 'center', padding: 20 }}>
+          <Empty
+            description="暂无剧本，请先生成第一集"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          >
             <Button
               type="primary"
-              onClick={() => navigate(`/editor?scriptId=${script.id}`)}
+              icon={<PlusOutlined />}
+              onClick={() => navigate('/create-work')}
             >
-              打开剧本工作台
+              创作新作品
             </Button>
-          </div>
+          </Empty>
         </Card>
-      );
-    }
-    return <Empty description="暂无剧本数据。请先生成剧本。" />;
-  };
+      </div>
+    );
+  }
 
-  const tabItems = [
-    {
-      key: 'scenes',
-      label: (
-        <span>
-          <UnorderedListOutlined /> 场景列表
-        </span>
-      ),
-      children: renderScenes(),
-    },
-    {
-      key: 'characters',
-      label: (
-        <span>
-          <TeamOutlined /> 角色管理
-        </span>
-      ),
-      children: renderCharacters(),
-    },
-    {
-      key: 'editor',
-      label: (
-        <span>
-          <EditOutlined /> 剧本工作台
-        </span>
-      ),
-      children: renderEditor(),
-    },
-  ];
+  const activeScript = scripts.find((s) => s.id === activeScriptId) || scripts[0];
+
+  const scriptTabItems = scripts.map((script) => ({
+    key: script.id,
+    label: (
+      <span>
+        <FileTextOutlined /> 第{script.episode || scripts.indexOf(script) + 1}集
+      </span>
+    ),
+  }));
+
+  const renderScriptDetail = (script) => {
+    let scenes = [];
+    let characters = [];
+    try {
+      if (script.scenes) {
+        scenes =
+          typeof script.scenes === 'string'
+            ? JSON.parse(script.scenes)
+            : script.scenes;
+      }
+      if (script.characters) {
+        characters =
+          typeof script.characters === 'string'
+            ? JSON.parse(script.characters)
+            : script.characters;
+      }
+    } catch {}
+
+    const contentTabs = [
+      {
+        key: 'scenes',
+        label: (
+          <span>
+            <UnorderedListOutlined /> 场景列表 ({scenes.length})
+          </span>
+        ),
+        children:
+          scenes.length > 0 ? (
+            <Row gutter={[16, 16]}>
+              {scenes.map((scene, idx) => (
+                <Col xs={24} sm={12} lg={8} xl={6} key={scene.id || idx}>
+                  <SceneCard scene={scene} index={idx} />
+                </Col>
+              ))}
+            </Row>
+          ) : (
+            <Empty description="暂无场景数据" />
+          ),
+      },
+      {
+        key: 'characters',
+        label: (
+          <span>
+            <TeamOutlined /> 角色管理 ({characters.length})
+          </span>
+        ),
+        children:
+          characters.length > 0 ? (
+            <Card>
+              <Table
+                dataSource={characters.map((c, i) => ({ ...c, key: c.id || i }))}
+                columns={characterColumns}
+                pagination={false}
+                size="middle"
+                locale={{ emptyText: '暂无角色' }}
+              />
+            </Card>
+          ) : (
+            <Empty description="暂无角色数据" />
+          ),
+      },
+    ];
+
+    return <Tabs items={contentTabs} />;
+  };
 
   return (
     <div style={{ minHeight: '100%' }}>
@@ -297,6 +339,7 @@ export default function WorkDetailPage() {
           alignItems: 'center',
           gap: 12,
           marginBottom: 16,
+          flexWrap: 'wrap',
         }}
       >
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/works')}>
@@ -305,18 +348,35 @@ export default function WorkDetailPage() {
         <Title level={3} style={{ margin: 0 }}>
           {work?.title || '作品详情'}
         </Title>
-        {work?.summary && (
-          <Text type="secondary" style={{ fontSize: 14 }}>
-            {work.summary}
-          </Text>
+        <Badge count={`${scripts.length} 集`} style={{ backgroundColor: '#1890ff' }} />
+        {work?.genre && <Tag>{work.genre === 'film' ? '电影' : work.genre === 'tv_series' ? '电视剧' : '舞台剧'}</Tag>}
+      </div>
+
+      <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => navigate(`/create-work`)}
+        >
+          生成新剧集
+        </Button>
+        {activeScript && (
+          <Button
+            icon={<EditOutlined />}
+            onClick={() => navigate(`/editor?scriptId=${activeScript.id}`)}
+          >
+            打开剧本工作台
+          </Button>
         )}
       </div>
+
       <Card bordered={false}>
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}>加载中...</div>
-        ) : (
-          <Tabs items={tabItems} />
-        )}
+        <Tabs
+          activeKey={activeScriptId}
+          onChange={setActiveScriptId}
+          items={scriptTabItems}
+        />
+        {activeScript && renderScriptDetail(activeScript)}
       </Card>
     </div>
   );

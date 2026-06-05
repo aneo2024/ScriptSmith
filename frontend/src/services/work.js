@@ -17,3 +17,6 @@ export const deleteWork = (id) =>
 
 export const getWorkCount = () =>
   api.get('/works/count').then((r) => r.data);
+
+export const listWorkScripts = (workId) =>
+  api.get(`/works/${workId}/scripts`).then((r) => r.data);

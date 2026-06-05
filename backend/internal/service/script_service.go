@@ -28,7 +28,8 @@ func NewScriptService(
 }
 
 // ConvertNovel 创建任务（pending）并立即返回 task_id；启动 goroutine 后台调 AI。
-func (s *ScriptService) ConvertNovel(novelText, format, style, userID string) (*model.Task, error) {
+// workID 可选，传入后脚本生成完成会自动关联到该作品。
+func (s *ScriptService) ConvertNovel(novelText, format, style, userID, workID string) (*model.Task, error) {
 	if novelText == "" {
 		return nil, fmt.Errorf("novel_text 不能为空")
 	}
@@ -53,7 +54,7 @@ func (s *ScriptService) ConvertNovel(novelText, format, style, userID string) (*
 	}
 
 	// 异步 goroutine 调 AI，避免阻塞 HTTP 请求
-	go s.processInBackground(task.ID)
+	go s.processInBackground(task.ID, workID)
 
 	return task, nil
 }
@@ -134,7 +135,7 @@ func (s *ScriptService) ListTasksByUser(userID string) ([]*model.Task, error) {
 }
 
 // processInBackground 后台处理：processing → 调 AI 得结构化 JSON → 存 Script → completed/failed
-func (s *ScriptService) processInBackground(taskID string) {
+func (s *ScriptService) processInBackground(taskID, workID string) {
 	defer func() {
 		if r := recover(); r != nil {
 			_ = s.taskRepo.UpdateStatus(taskID, "failed", 0, "", fmt.Sprintf("后台处理异常: %v", r))
@@ -165,6 +166,12 @@ func (s *ScriptService) processInBackground(taskID string) {
 	// 填充 Script 表字段后存入数据库
 	script.ID = uuid.New().String()
 	script.TaskID = taskID
+	if workID != "" {
+		script.WorkID = &workID
+		// 计算当前作品已有多少集
+		existing, _ := s.scriptRepo.ListByWorkID(workID)
+		script.Episode = len(existing) + 1
+	}
 	script.Version = 1
 	script.YAML = "" // 后续再补充 YAML 生成逻辑
 	if err := s.scriptRepo.Create(script); err != nil {
@@ -215,6 +222,11 @@ func (s *ScriptService) GetScriptByTaskID(taskID string) (*model.Script, error) 
 		return nil, fmt.Errorf("剧本不存在: %w", err)
 	}
 	return script, nil
+}
+
+// ListScriptsByWorkID 获取作品下所有剧本（按集数排序）
+func (s *ScriptService) ListScriptsByWorkID(workID string) ([]model.Script, error) {
+	return s.scriptRepo.ListByWorkID(workID)
 }
 
 // UpdateScene 更新指定剧本中的某个场景

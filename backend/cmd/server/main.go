@@ -95,6 +95,9 @@ func main() {
 			auth.GET("/works/:id", workH.GetWork)
 			auth.PUT("/works/:id", workH.UpdateWork)
 			auth.DELETE("/works/:id", workH.DeleteWork)
+
+			// 作品下的剧本列表
+			auth.GET("/works/:id/scripts", h.ListWorkScripts)
 		}
 
 		// 管理路由：需要认证 + 管理员权限
