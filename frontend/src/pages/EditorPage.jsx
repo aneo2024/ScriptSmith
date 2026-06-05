@@ -3,77 +3,20 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Spin, Button, Typography } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import SceneNav from '../components/SceneNav';
+import SceneCard from '../components/SceneCard';
 import useScriptStore from '../store/scriptStore';
 import { getScriptByTaskId } from '../services/api';
 import '../styles/script-editor.css';
 
 const { Title, Text } = Typography;
 
-/** 渲染单个内容块 */
-function ContentItem({ item }) {
-  switch (item.type) {
-    case 'action':
-      return (
-        <div className="script-editor__canvas-content-item script-editor__canvas-content-item--action">
-          <span className="tag">动作</span>
-          {item.description}
-        </div>
-      );
-    case 'dialogue':
-      return (
-        <div className="script-editor__canvas-content-item script-editor__canvas-content-item--dialogue">
-          <span className="tag">对话</span>
-          <strong>{item.character_name || item.character_id}</strong>
-          {item.emotion && <span style={{ color: '#888', marginLeft: 6 }}>({item.emotion})</span>}
-          {item.parenthetical && (
-            <div style={{ color: '#888', fontStyle: 'italic', marginBottom: 4 }}>
-              ({item.parenthetical})
-            </div>
-          )}
-          <div style={{ marginTop: 4 }}>{item.text}</div>
-        </div>
-      );
-    case 'transition':
-      return (
-        <div className="script-editor__canvas-content-item" style={{ textAlign: 'right', borderLeftColor: '#faad14' }}>
-          <span className="tag">转场</span>
-          {item.transition_type}
-        </div>
-      );
-    case 'sound':
-      return (
-        <div className="script-editor__canvas-content-item" style={{ borderLeftColor: '#722ed1' }}>
-          <span className="tag">音效</span>
-          <strong>{item.sound_type}</strong>
-          {item.sound_description && ` — ${item.sound_description}`}
-        </div>
-      );
-    case 'note':
-      return (
-        <div className="script-editor__canvas-content-item" style={{ borderLeftColor: '#999', fontStyle: 'italic' }}>
-          <span className="tag">备注</span>
-          {item.note_text}
-        </div>
-      );
-    default:
-      return (
-        <div className="script-editor__canvas-content-item">
-          <span className="tag">{item.type}</span>
-          {item.description || item.text || JSON.stringify(item)}
-        </div>
-      );
-  }
-}
-
-/** 渲染选中场景的右侧画布 */
 function SceneCanvas() {
   const script = useScriptStore((s) => s.script);
   const selectedSceneId = useScriptStore((s) => s.selectedSceneId);
-
   const scenes = script?.scenes || [];
-  const scene = scenes.find((s) => s.id === selectedSceneId);
+  const selectedScene = scenes.find((s) => s.id === selectedSceneId);
 
-  if (!scene) {
+  if (!selectedScene) {
     return (
       <div className="script-editor__canvas">
         <div className="script-editor__canvas-placeholder">
@@ -83,45 +26,9 @@ function SceneCanvas() {
     );
   }
 
-  const slugline = scene.slugline;
-
   return (
     <div className="script-editor__canvas">
-      <div className="script-editor__canvas-scene-title">
-        第{scene.sequence}场 — {scene.title || '未命名场景'}
-      </div>
-
-      {slugline && (
-        <div className="script-editor__canvas-slugline">
-          {[slugline.type, slugline.name, slugline.time]
-            .filter(Boolean)
-            .join(' · ')}
-        </div>
-      )}
-
-      {scene.characters_present?.length > 0 && (
-        <div className="script-editor__canvas-characters">
-          出场角色：{scene.characters_present.join('、')}
-        </div>
-      )}
-
-      {scene.mood && (
-        <div className="script-editor__canvas-characters">
-          氛围：{scene.mood}
-        </div>
-      )}
-
-      <div className="script-editor__canvas-content">
-        {(scene.content || []).map((item) => (
-          <ContentItem key={item.id} item={item} />
-        ))}
-      </div>
-
-      {scene.notes && (
-        <div style={{ marginTop: 16, padding: 12, background: '#fffbe6', borderRadius: 4, fontSize: 13, color: '#666' }}>
-          <strong>场景备注：</strong>{scene.notes}
-        </div>
-      )}
+      <SceneCard scene={selectedScene} />
     </div>
   );
 }
