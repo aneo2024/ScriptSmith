@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 	"scriptsmith/internal/model"
 	"scriptsmith/internal/repository"
 	"scriptsmith/pkg/jwt"
@@ -12,11 +13,12 @@ import (
 )
 
 type AuthHandler struct {
-	userRepo *repository.UserRepository
+	userRepo         *repository.UserRepository
+	refreshTokenRepo *repository.RefreshTokenRepository
 }
 
-func NewAuthHandler(userRepo *repository.UserRepository) *AuthHandler {
-	return &AuthHandler{userRepo: userRepo}
+func NewAuthHandler(userRepo *repository.UserRepository, refreshTokenRepo *repository.RefreshTokenRepository) *AuthHandler {
+	return &AuthHandler{userRepo: userRepo, refreshTokenRepo: refreshTokenRepo}
 }
 
 var (
@@ -121,12 +123,65 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	// 生成刷新令牌（有效期 7 天）
+	refreshToken, err := h.refreshTokenRepo.Create(user.ID, 7*24*time.Hour)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成刷新令牌失败"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"token":      token,
-		"expires_in": 86400,
-		"user_id":    user.ID,
-		"username":   user.Username,
-		"role":       user.Role,
+		"token":         token,
+		"refresh_token": refreshToken,
+		"expires_in":    86400,
+		"user_id":       user.ID,
+		"username":      user.Username,
+		"role":          user.Role,
+	})
+}
+
+// Refresh 刷新令牌 — 使用有效的 refresh_token 换发新的 access_token 和 refresh_token（轮换）
+// POST /v1/auth/refresh
+func (h *AuthHandler) Refresh(c *gin.Context) {
+	var req struct {
+		RefreshToken string `json:"refresh_token" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数不合法"})
+		return
+	}
+
+	userID, err := h.refreshTokenRepo.ValidateAndConsume(req.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "刷新令牌无效或已过期"})
+		return
+	}
+
+	user, err := h.userRepo.GetByID(userID)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户不存在"})
+		return
+	}
+
+	token, err := jwt.GenerateToken(user.ID, user.Role)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成 token 失败"})
+		return
+	}
+
+	refreshToken, err := h.refreshTokenRepo.Create(user.ID, 7*24*time.Hour)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成刷新令牌失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token":         token,
+		"refresh_token": refreshToken,
+		"expires_in":    86400,
+		"user_id":       user.ID,
+		"username":      user.Username,
+		"role":          user.Role,
 	})
 }
 

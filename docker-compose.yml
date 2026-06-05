@@ -1,26 +1,42 @@
 version: "3.8"
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: scriptsmith-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: scriptsmith
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   backend:
     build:
       context: .
       dockerfile: docker/Dockerfile.backend
     container_name: scriptsmith-backend
-    ports:
-      - "8080:8080"
     environment:
       - PORT=8080
-      - DB_PATH=/data/scriptsmith.db
+      - DB_DSN=postgres://postgres:postgres@postgres:5432/scriptsmith?sslmode=disable
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
-    volumes:
-      - scriptsmith-data:/data
+      - JWT_SECRET=${JWT_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
-  frontend:
+  nginx:
     build:
       context: .
-      dockerfile: docker/Dockerfile
-    container_name: scriptsmith-frontend
+      dockerfile: docker/Dockerfile.nginx
+    container_name: scriptsmith-nginx
     ports:
       - "80:80"
     depends_on:
@@ -28,4 +44,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  scriptsmith-data:
+  pgdata:
