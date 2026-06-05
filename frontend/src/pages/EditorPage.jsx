@@ -4,7 +4,6 @@ import { Spin, Button, Typography } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import SceneNav from '../components/SceneNav';
 import SceneCard from '../components/SceneCard';
-import AIAssistantPanel from '../components/AIAssistantPanel';
 import useScriptStore from '../store/scriptStore';
 import { getScriptByTaskId } from '../services/api';
 import '../styles/script-editor.css';
@@ -89,7 +88,7 @@ export default function EditorPage() {
         )}
       </div>
 
-      {/* 主体布局：左侧场景导航 + 中间画布 + 右侧 AI 面板 */}
+      {/* 主体布局：左侧场景导航 + 右侧画布 */}
       {isLoading ? (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
           <Spin size="large" tip="加载剧本中..." />
@@ -98,7 +97,6 @@ export default function EditorPage() {
         <div className="script-editor">
           <SceneNav />
           <SceneCanvas />
-          <AIAssistantPanel />
         </div>
       )}
     </div>
