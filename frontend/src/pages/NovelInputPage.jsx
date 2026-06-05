@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Typography, Input, Select, Button, message } from 'antd';
-import { ThunderboltOutlined, ClearOutlined } from '@ant-design/icons';
+import { Card, Typography, Input, Select, Button, message, Upload } from 'antd';
+import { ThunderboltOutlined, ClearOutlined, UploadOutlined } from '@ant-design/icons';
 import TaskProgress from '../components/TaskProgress';
 import { useTask } from '../hooks/useTask';
 
@@ -26,7 +26,6 @@ export default function NovelInputPage() {
   const { submit, status, progress, error, isActive, yaml, taskId, reset } = useTask();
 
   const [novelText, setNovelText] = useState(() => {
-    // 页面加载时恢复上次未提交的小说文本
     try {
       return localStorage.getItem('novel_draft') || '';
     } catch {
@@ -35,10 +34,10 @@ export default function NovelInputPage() {
   });
   const [format, setFormat] = useState('film');
   const [style, setStyle] = useState('faithful');
+  const [uploading, setUploading] = useState(false);
 
   const charCount = novelText.length;
 
-  // 自动跳转前先清空草稿（任务已完成）
   useEffect(() => {
     if (status === 'completed' && yaml && taskId) {
       try { localStorage.removeItem('novel_draft'); } catch {}
@@ -46,12 +45,31 @@ export default function NovelInputPage() {
     }
   }, [status, yaml, taskId, navigate]);
 
-  // 输入框内容变化时自动保存草稿
   const handleTextChange = (e) => {
     const val = e.target.value;
     setNovelText(val);
     try { localStorage.setItem('novel_draft', val); } catch {}
   };
+
+  const handleFileUpload = useCallback(async (file) => {
+    setUploading(true);
+    try {
+      const content = await file.text();
+      const trimmed = content.trim();
+      if (trimmed.length > MAX_CHARS) {
+        message.error(`文件内容超过 ${MAX_CHARS} 字符限制`);
+        return false;
+      }
+      setNovelText(trimmed);
+      try { localStorage.setItem('novel_draft', trimmed); } catch {}
+      message.success('文件导入成功');
+    } catch (err) {
+      message.error('文件读取失败，请确保文件编码正确');
+    } finally {
+      setUploading(false);
+    }
+    return false;
+  }, []);
 
   const handleSubmit = async () => {
     if (!novelText.trim()) {
@@ -86,6 +104,26 @@ export default function NovelInputPage() {
           <Text type="danger">{error}</Text>
         </Card>
       )}
+
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+        <Upload
+          accept=".txt,.md,.txt,.text"
+          showUploadList={false}
+          beforeUpload={handleFileUpload}
+          disabled={isPolling}
+        >
+          <Button
+            icon={<UploadOutlined />}
+            disabled={isPolling}
+            loading={uploading}
+          >
+            {uploading ? '上传中...' : '上传文件'}
+          </Button>
+        </Upload>
+        <Text type="secondary" style={{ fontSize: 13 }}>
+          支持 .txt、.md 等文本格式
+        </Text>
+      </div>
 
       <TextArea
         value={novelText}

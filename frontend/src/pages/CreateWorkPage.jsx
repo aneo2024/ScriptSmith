@@ -52,49 +52,13 @@ export default function CreateWorkPage() {
     return false;
   }, []);
 
-  const handleGenerateScript = async () => {
+  const handleGenerateScript = () => {
     if (!workTitle.trim()) {
       message.warning('请先输入作品名');
       return;
     }
-    setGenerating(true);
-    try {
-      message.info('正在生成剧本，请稍候...');
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const mockScenes = [
-        {
-          id: 'scene-1',
-          sequence: 1,
-          title: '开场',
-          slugline: { type: 'exterior', name: '城市街道', time: 'day' },
-        },
-        {
-          id: 'scene-2',
-          sequence: 2,
-          title: '咖啡馆相遇',
-          slugline: { type: 'interior', name: '咖啡馆', time: 'afternoon' },
-        },
-        {
-          id: 'scene-3',
-          sequence: 3,
-          title: '深夜对话',
-          slugline: { type: 'interior', name: '主角公寓', time: 'night' },
-        },
-      ];
-      const mockCharacters = [
-        { id: 'char-1', name: '张明', type: 'protagonist', description: '男主角' },
-        { id: 'char-2', name: '李婷', type: 'protagonist', description: '女主角' },
-        { id: 'char-3', name: '老王', type: 'supporting', description: '咖啡馆老板' },
-      ];
-      setScenes(mockScenes);
-      setCharacters(mockCharacters);
-      setShowPreview(true);
-      message.success('剧本生成成功');
-    } catch (err) {
-      message.error('生成失败，请重试');
-    } finally {
-      setGenerating(false);
-    }
+    localStorage.setItem('work_title', workTitle);
+    navigate('/');
   };
 
   const handleSaveWork = async () => {
