@@ -356,7 +356,7 @@ export default function WorkDetailPage() {
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          onClick={() => navigate(`/create-work`)}
+          onClick={() => navigate(`/create-work?workId=${id}`)}
         >
           生成新剧集
         </Button>
