@@ -5,9 +5,9 @@ import (
 	"log"
 	"os"
 	"scriptsmith/internal/ai"
+	"scriptsmith/internal/database"
 	"scriptsmith/internal/handler"
 	"scriptsmith/internal/middleware"
-	"scriptsmith/internal/model"
 	"scriptsmith/internal/repository"
 	"scriptsmith/internal/service"
 
@@ -34,7 +34,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
-	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}); err != nil {
+	if err := database.Migrate(db); err != nil {
 		log.Fatalf("迁移表结构失败: %v", err)
 	}
 	log.Printf("数据库已就绪: %s", dbPath)

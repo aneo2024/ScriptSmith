@@ -3,20 +3,30 @@ package model
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 // Script 剧本结构化存储
 type Script struct {
-	ID         string         `json:"id"`
-	TaskID     string         `json:"task_id"`
-	Metadata   datatypes.JSON `json:"metadata"`   // {title, original_title, format, genre}
-	Characters datatypes.JSON `json:"characters"` // [{id, name, type, description}]
-	Scenes     datatypes.JSON `json:"scenes"`     // [{id, sequence, slugline, content}]
-	YAML       string         `json:"yaml"`       // 实时生成的 YAML
+	ID         string         `gorm:"primaryKey" json:"id"`
+	TaskID     string         `gorm:"index" json:"task_id"`
+	Metadata   datatypes.JSON `gorm:"type:json" json:"metadata"`   // {title, original_title, format, genre}
+	Characters datatypes.JSON `gorm:"type:json" json:"characters"` // [{id, name, type, description}]
+	Scenes     datatypes.JSON `gorm:"type:json" json:"scenes"`     // [{id, sequence, slugline, content}]
+	YAML       string         `gorm:"type:text" json:"yaml"`       // 实时生成的 YAML
 	Version    int            `json:"version"`
 	CreatedAt  time.Time      `json:"created_at"`
 	UpdatedAt  time.Time      `json:"updated_at"`
+}
+
+// BeforeCreate GORM 钩子：创建前自动生成 UUID
+func (s *Script) BeforeCreate(tx *gorm.DB) error {
+	if s.ID == "" {
+		s.ID = uuid.New().String()
+	}
+	return nil
 }
 
 // Slugline 场景标题行

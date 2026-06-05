@@ -13,13 +13,13 @@ import (
 
 type ScriptService struct {
 	taskRepo   *repository.TaskRepository
-	scriptRepo *repository.ScriptRepository
+	scriptRepo repository.ScriptRepository
 	aiClient   *ai.Client
 }
 
 func NewScriptService(
 	taskRepo *repository.TaskRepository,
-	scriptRepo *repository.ScriptRepository,
+	scriptRepo repository.ScriptRepository,
 	aiClient *ai.Client,
 ) *ScriptService {
 	return &ScriptService{taskRepo: taskRepo, scriptRepo: scriptRepo, aiClient: aiClient}

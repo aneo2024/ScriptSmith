@@ -316,11 +316,7 @@ JSON 结构体（严格按此结构输出）：
       "id": "char_1",
       "name": "角色名",
       "type": "protagonist|antagonist|supporting|extra",
-      "description": "角色描述",
-      "age": "年龄",
-      "gender": "性别",
-      "occupation": "职业",
-      "arc": "角色弧光"
+      "description": "角色描述"
     }
   ],
   "scenes": [
