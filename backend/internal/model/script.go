@@ -68,6 +68,7 @@ type Character struct {
 	Gender      string `json:"gender,omitempty"`
 	Occupation  string `json:"occupation,omitempty"`
 	Arc         string `json:"arc,omitempty"`
+	Appearance  string `json:"appearance,omitempty"` // AI 生成的角色外貌描述
 }
 
 // Metadata 剧本元数据

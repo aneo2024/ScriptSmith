@@ -29,9 +29,18 @@ import {
   ReadOutlined,
   BulbOutlined,
   LoadingOutlined,
+  SkinOutlined,
+  HeatMapOutlined,
 } from '@ant-design/icons';
 import { parseScript, characterTypeLabel, characterTypeColor } from '../utils/parseScript';
-import { getWork, listWorkScripts, deleteWork, generateScriptSummary } from '../services/work';
+import {
+  getWork,
+  listWorkScripts,
+  deleteWork,
+  generateScriptSummary,
+  generateCharacterAppearances,
+  generateSceneEnvironments,
+} from '../services/work';
 
 const { Title, Text, Paragraph } = Typography;
 

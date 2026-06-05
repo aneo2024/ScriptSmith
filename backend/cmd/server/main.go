@@ -51,7 +51,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
-	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}, &model.Work{}, &model.RefreshToken{}, &model.Article{}, &model.Topic{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}, &model.Work{}, &model.RefreshToken{}, &model.Article{}, &model.Topic{}, &model.AIProvider{}); err != nil {
 		log.Fatalf("迁移表结构失败: %v", err)
 	}
 	log.Printf("数据库已就绪 (type=%s)", dbType)
@@ -63,11 +63,13 @@ func main() {
 	workRepo := repository.NewWorkRepository(db)
 	refreshTokenRepo := repository.NewRefreshTokenRepository(db)
 	articleRepo := repository.NewArticleRepository(db)
-	svc := service.NewScriptService(taskRepo, scriptRepo, workRepo, aiClient)
+	providerRepo := repository.NewAIProviderRepository(db)
+	svc := service.NewScriptService(taskRepo, scriptRepo, workRepo, providerRepo, aiClient)
 	h := handler.NewScriptHandler(svc)
 	authH := handler.NewAuthHandler(userRepo, refreshTokenRepo)
 	workH := handler.NewWorkHandler(workRepo, scriptRepo, taskRepo)
 	inspirationH := handler.NewInspirationHandler(articleRepo, aiClient)
+	aiProviderH := handler.NewAIProviderHandler(providerRepo, aiClient)
 
 	r := gin.Default()
 
@@ -107,8 +109,10 @@ func main() {
 			auth.GET("/scripts/:scriptID", h.GetStructuredScript)
 			auth.GET("/scripts/:scriptID/yaml", h.ExportYAML)
 			auth.PUT("/scripts/:scriptID", h.SaveScript)
-		auth.POST("/scripts/:scriptID/summary", h.GenerateSummary)
-		auth.PUT("/scripts/:scriptID/scenes/:sceneID", h.UpdateScene)
+			auth.POST("/scripts/:scriptID/summary", h.GenerateSummary)
+			auth.POST("/scripts/:scriptID/characters/appearance", h.GenerateCharacterAppearances)
+			auth.POST("/scripts/:scriptID/scenes/environment", h.GenerateSceneEnvironments)
+			auth.PUT("/scripts/:scriptID/scenes/:sceneID", h.UpdateScene)
 			auth.PUT("/scripts/:scriptID/contents/:contentID", h.UpdateContent)
 			auth.POST("/scripts/:scriptID/scenes/:sceneID/contents", h.AddContent)
 			auth.DELETE("/scripts/:scriptID/contents/:contentID", h.DeleteContent)
@@ -134,6 +138,14 @@ func main() {
 			auth.GET("/inspiration/topics", inspirationH.ListTopics)
 			auth.GET("/inspiration/topics/today", inspirationH.ListTodayTopics)
 			auth.POST("/inspiration/topics", inspirationH.CreateTopic)
+
+			// AI provider 管理（用户自定义大模型）
+			auth.POST("/ai/providers", aiProviderH.Create)
+			auth.GET("/ai/providers", aiProviderH.List)
+			auth.PUT("/ai/providers/:id", aiProviderH.Update)
+			auth.DELETE("/ai/providers/:id", aiProviderH.Delete)
+			auth.PUT("/ai/providers/:id/default", aiProviderH.SetDefault)
+			auth.POST("/ai/providers/:id/test", aiProviderH.Test)
 		}
 
 		// 管理路由：需要认证 + 管理员权限

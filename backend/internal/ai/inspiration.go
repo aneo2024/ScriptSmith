@@ -5,9 +5,9 @@ import (
 	"strings"
 )
 
-// GenerateInspirationArticle AI 生成剧本创作知识文章
+// GenerateInspirationArticle AI 生成剧本创作知识文章（使用系统默认 provider）
 func (c *Client) GenerateInspirationArticle(topic string) (string, error) {
-	if c.apiKey == "" {
+	if c.defaultConfig.APIKey == "" {
 		return "", fmt.Errorf("DEEPSEEK_API_KEY 未配置")
 	}
 
@@ -30,7 +30,7 @@ func (c *Client) GenerateInspirationArticle(topic string) (string, error) {
 
 只输出文章内容，不要额外的说明。`, topic)
 
-	return c.callAI(userPrompt, systemPrompt)
+	return c.chat(c.defaultConfig, systemPrompt, userPrompt)
 }
 
 var defaultInspirationTopics = []string{

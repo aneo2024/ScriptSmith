@@ -109,8 +109,14 @@ export default api;
 
 // ============ 接口方法 ============
 
-export const convertNovel = (novelText, format, style, workId) =>
-  api.post('/convert', { novel_text: novelText, format, style, work_id: workId }).then((r) => r.data);
+export const convertNovel = (novelText, format, style, workId, providerId) =>
+  api.post('/convert', {
+    novel_text: novelText,
+    format,
+    style,
+    work_id: workId,
+    provider_id: providerId,
+  }).then((r) => r.data);
 
 export const getTaskStatus = (taskId) =>
   api.get(`/task/${taskId}`).then((r) => r.data);
@@ -132,3 +138,23 @@ export const updateContent = (scriptId, contentId, data) =>
 
 export const updateScene = (scriptId, sceneId, data) =>
   api.put(`/scripts/${scriptId}/scenes/${sceneId}`, data).then((r) => r.data);
+
+// ============ AI Provider 管理 ============
+
+export const listProviders = () =>
+  api.get('/ai/providers').then((r) => r.data);
+
+export const createProvider = (config) =>
+  api.post('/ai/providers', config).then((r) => r.data);
+
+export const updateProvider = (id, config) =>
+  api.put(`/ai/providers/${id}`, config).then((r) => r.data);
+
+export const deleteProvider = (id) =>
+  api.delete(`/ai/providers/${id}`).then((r) => r.data);
+
+export const setDefaultProvider = (id) =>
+  api.put(`/ai/providers/${id}/default`).then((r) => r.data);
+
+export const testProvider = (id) =>
+  api.post(`/ai/providers/${id}/test`).then((r) => r.data);
