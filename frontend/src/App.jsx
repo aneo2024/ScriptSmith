@@ -7,6 +7,8 @@ import NovelInputPage from './pages/NovelInputPage';
 import EditorPage from './pages/EditorPage';
 import CharacterListPage from './pages/CharacterListPage';
 import SceneListPage from './pages/SceneListPage';
+import WorkListPage from './pages/WorkListPage';
+import CreateWorkPage from './pages/CreateWorkPage';
 import LoginPage from './pages/LoginPage';
 import { TaskProvider } from './hooks/useTask';
 import { AuthProvider, useAuth } from './hooks/useAuth';
@@ -24,11 +26,13 @@ function AppRoutes() {
         <AuthGuard>
           <AppLayout>
             <Routes>
+              <Route path="/works" element={<WorkListPage />} />
+              <Route path="/create-work" element={<CreateWorkPage />} />
               <Route path="/" element={<NovelInputPage />} />
               <Route path="/editor" element={<EditorPage />} />
               <Route path="/characters" element={<CharacterListPage />} />
               <Route path="/scenes" element={<SceneListPage />} />
-              <Route path="*" element={<NovelInputPage />} />
+              <Route path="*" element={<WorkListPage />} />
             </Routes>
           </AppLayout>
         </AuthGuard>
