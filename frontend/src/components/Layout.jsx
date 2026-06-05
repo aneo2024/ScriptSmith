@@ -1,20 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Layout, Menu, Typography, Divider, Button, Space, Card, message } from 'antd';
+import { Layout, Menu, Typography, Divider, Button, Space, message } from 'antd';
 import {
-  FileTextOutlined,
-  EditOutlined,
-  TeamOutlined,
-  UnorderedListOutlined,
+  BookOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   LogoutOutlined,
   PlusOutlined,
-  BookOutlined,
   UserOutlined,
-  EyeOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
-import RecentTasks from './RecentTasks';
 import { useAuth } from '../hooks/useAuth';
 import { getWorkCount } from '../services/work';
 
@@ -23,10 +17,6 @@ const { Title, Text } = Typography;
 
 const menuItems = [
   { key: '/works', icon: <BookOutlined />, label: '作品列表' },
-  { key: '/', icon: <FileTextOutlined />, label: '小说输入' },
-  { key: '/editor', icon: <EditOutlined />, label: '剧本工作台' },
-  { key: '/characters', icon: <TeamOutlined />, label: '角色管理' },
-  { key: '/scenes', icon: <UnorderedListOutlined />, label: '场景列表' },
 ];
 
 export default function AppLayout({ children }) {
@@ -38,7 +28,7 @@ export default function AppLayout({ children }) {
 
   const selectedKey = menuItems.some((m) => m.key === location.pathname)
     ? location.pathname
-    : '/';
+    : '';
 
   useEffect(() => {
     fetchWorkCount();
@@ -49,7 +39,7 @@ export default function AppLayout({ children }) {
       const result = await getWorkCount();
       setWorkCount(result.count || 0);
     } catch (err) {
-      message.error('获取作品统计失败');
+      // 静默失败，不影响用户体验
     }
   };
 
@@ -86,12 +76,31 @@ export default function AppLayout({ children }) {
         {!collapsed && (
           <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#1890ff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+              <div
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  background: '#1890ff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 12,
+                }}
+              >
                 <UserOutlined style={{ fontSize: 24, color: '#fff' }} />
               </div>
               <Text style={{ color: '#fff', fontWeight: 500 }}>{user?.username}</Text>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 16, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-around',
+                marginTop: 16,
+                paddingTop: 12,
+                borderTop: '1px solid rgba(255,255,255,0.1)',
+              }}
+            >
               <div style={{ textAlign: 'center' }}>
                 <Text style={{ color: '#fff', fontSize: 18, fontWeight: 600 }}>{workCount}</Text>
                 <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>作品数</Text>
@@ -128,7 +137,6 @@ export default function AppLayout({ children }) {
             </Button>
           </div>
         )}
-        <RecentTasks collapsed={collapsed} />
       </Sider>
       <Layout>
         <Header

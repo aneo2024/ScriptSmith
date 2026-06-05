@@ -7,84 +7,91 @@ import {
   Typography,
   message,
   Upload,
-  Alert,
-  List,
-  Tag,
-  Space,
+  Select,
+  Divider,
 } from 'antd';
 import {
   UploadOutlined,
-  PlayCircleOutlined,
+  ThunderboltOutlined,
   ArrowLeftOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
-import { createWork } from '../services/work';
-import { parseScript } from '../utils/parseScript';
+import { useTask } from '../hooks/useTask';
+import TaskProgress from '../components/TaskProgress';
 
+const { TextArea } = Input;
 const { Title, Text } = Typography;
+const MAX_CHARS = 50000;
+
+const formatOptions = [
+  { value: 'film', label: '电影' },
+  { value: 'tv_series', label: '电视剧' },
+  { value: 'stage_play', label: '舞台剧' },
+];
+
+const styleOptions = [
+  { value: 'faithful', label: '忠实原著' },
+  { value: 'commercial', label: '商业化' },
+  { value: 'experimental', label: '实验性' },
+];
 
 export default function CreateWorkPage() {
   const [workTitle, setWorkTitle] = useState('');
-  const [scenes, setScenes] = useState([]);
-  const [characters, setCharacters] = useState([]);
+  const [novelText, setNovelText] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [yamlContent, setYamlContent] = useState('');
-  const [showPreview, setShowPreview] = useState(false);
+  const [format, setFormat] = useState('film');
+  const [style, setStyle] = useState('faithful');
   const navigate = useNavigate();
+  const { submit, status, progress, error, isActive, taskId, yaml } = useTask();
 
-  const handleUploadYAML = useCallback(async (file) => {
+  const handleFileUpload = useCallback(async (file) => {
     setUploading(true);
     try {
       const content = await file.text();
-      setYamlContent(content);
-      const script = parseScript(content);
-      setScenes(script.scenes || []);
-      setCharacters(script.characters || []);
-      setShowPreview(true);
-      message.success('YAML 导入成功');
+      const trimmed = content.trim();
+      if (trimmed.length > MAX_CHARS) {
+        message.error(`文件内容超过 ${MAX_CHARS} 字符限制`);
+        return false;
+      }
+      setNovelText(trimmed);
+      message.success('文件导入成功');
     } catch (err) {
-      message.error('导入失败，请检查 YAML 格式');
-      console.error(err);
+      message.error('文件读取失败，请确保文件编码正确');
     } finally {
       setUploading(false);
     }
     return false;
   }, []);
 
-  const handleGenerateScript = () => {
+  const handleGenerate = async () => {
     if (!workTitle.trim()) {
       message.warning('请先输入作品名');
       return;
     }
-    localStorage.setItem('work_title', workTitle);
-    navigate('/');
-  };
-
-  const handleSaveWork = async () => {
-    if (!workTitle.trim()) {
-      message.warning('请输入作品名');
+    if (!novelText.trim()) {
+      message.warning('请输入或上传小说文本');
       return;
     }
-    try {
-      await createWork({
-        title: workTitle,
-        summary: '',
-        genre: '',
-        main_char: characters[0]?.name || '',
-        supporting_chars: characters.slice(1).map((c) => c.name),
-        word_count: yamlContent.length,
-      });
-      message.success('作品创建成功');
-      navigate('/works');
-    } catch (err) {
-      message.error('创建失败');
-    }
+    await submit(novelText, format, style);
   };
 
-  const handleBack = () => {
-    navigate('/works');
-  };
+  if (status === 'completed' && taskId) {
+    return (
+      <Card>
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <Title level={3}>剧本生成成功！</Title>
+          <Text type="secondary">正在跳转到剧本工作台...</Text>
+          <div style={{ marginTop: 20 }}>
+            <Button type="primary" onClick={() => navigate(`/editor?taskId=${taskId}`)}>
+              立即查看
+            </Button>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  const isPolling = isActive || status === 'submitting';
 
   return (
     <div style={{ minHeight: '100%', display: 'flex', gap: 24 }}>
@@ -106,59 +113,53 @@ export default function CreateWorkPage() {
               onChange={(e) => setWorkTitle(e.target.value)}
               size="large"
               style={{ marginTop: 8 }}
+              disabled={isPolling}
+            />
+          </div>
+
+          <Divider style={{ margin: '0' }} />
+
+          <div>
+            <Text strong>剧本格式</Text>
+            <Select
+              value={format}
+              onChange={setFormat}
+              options={formatOptions}
+              size="large"
+              disabled={isPolling}
+              style={{ width: '100%', marginTop: 8 }}
             />
           </div>
 
           <div>
-            <Text strong>导入剧本 (YAML)</Text>
-            <Upload
-              accept=".yaml,.yml"
-              showUploadList={false}
-              beforeUpload={handleUploadYAML}
-              style={{ marginTop: 8 }}
-            >
-              <Button
-                type="default"
-                icon={<UploadOutlined />}
-                block
-                loading={uploading}
-              >
-                {uploading ? '导入中...' : '选择 YAML 文件'}
-              </Button>
-            </Upload>
-            <Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: 'block' }}>
-              支持 .yaml 或 .yml 格式文件
-            </Text>
+            <Text strong>改编风格</Text>
+            <Select
+              value={style}
+              onChange={setStyle}
+              options={styleOptions}
+              size="large"
+              disabled={isPolling}
+              style={{ width: '100%', marginTop: 8 }}
+            />
           </div>
 
-          <div>
-            <Text strong>生成剧本</Text>
-            <Button
-              type="primary"
-              icon={<PlayCircleOutlined />}
-              block
-              loading={generating}
-              onClick={handleGenerateScript}
-              style={{ marginTop: 8 }}
-            >
-              {generating ? '生成中...' : 'AI 生成剧本'}
-            </Button>
-          </div>
+          <Divider style={{ margin: '0' }} />
 
-          {showPreview && (
-            <Button
-              type="primary"
-              block
-              onClick={handleSaveWork}
-            >
-              保存作品
-            </Button>
-          )}
+          <Button
+            type="primary"
+            icon={<ThunderboltOutlined />}
+            block
+            loading={isPolling}
+            onClick={handleGenerate}
+            size="large"
+          >
+            AI 生成剧本
+          </Button>
 
           <Button
             type="text"
             icon={<ArrowLeftOutlined />}
-            onClick={handleBack}
+            onClick={() => navigate('/works')}
           >
             返回作品列表
           </Button>
@@ -167,85 +168,57 @@ export default function CreateWorkPage() {
 
       <Card
         style={{ flex: 1 }}
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FileTextOutlined />
-            <span>场景列表</span>
-            {showPreview && (
-              <Tag color="success">已导入</Tag>
-            )}
-          </div>
-        }
+        title="第一步：输入小说文本"
       >
-        {!showPreview ? (
-          <div style={{ textAlign: 'center', padding: '80px 0', color: '#999' }}>
-            <Alert
-              message="请先导入 YAML 或生成剧本"
-              description="导入剧本文件或使用 AI 生成后，场景列表将在此显示"
-              type="info"
-              showIcon
-            />
-          </div>
-        ) : (
-          <div>
-            {characters.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <Text strong style={{ marginBottom: 8, display: 'block' }}>角色列表</Text>
-                <Space wrap>
-                  {characters.map((char) => (
-                    <Tag
-                      key={char.id}
-                      color={char.type === 'protagonist' ? 'blue' : 'gray'}
-                    >
-                      {char.name} ({char.type === 'protagonist' ? '主角' : '配角'})
-                    </Tag>
-                  ))}
-                </Space>
-              </div>
-            )}
+        {error && (
+          <Card
+            size="small"
+            style={{ marginBottom: 16, background: '#fff2f0', borderColor: '#ffccc7' }}
+          >
+            <Text type="danger">{error}</Text>
+          </Card>
+        )}
 
-            <Text strong style={{ marginBottom: 8, display: 'block' }}>场景预览</Text>
-            <List
-              dataSource={scenes}
-              renderItem={(scene) => (
-                <List.Item
-                  key={scene.id}
-                  style={{
-                    padding: '12px 16px',
-                    border: '1px solid #f0f0f0',
-                    borderRadius: '8px',
-                    marginBottom: 8,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span
-                      style={{
-                        width: 32,
-                        height: 32,
-                        background: '#1890ff',
-                        color: '#fff',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 14,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {scene.sequence}
-                    </span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 500 }}>{scene.title}</div>
-                      <div style={{ color: '#666', fontSize: 13 }}>
-                        {scene.slugline.type === 'interior' ? '内景' : '外景'} · {scene.slugline.name} ·{' '}
-                        {scene.slugline.time === 'day' ? '白天' : scene.slugline.time === 'night' ? '夜晚' : scene.slugline.time}
-                      </div>
-                    </div>
-                  </div>
-                </List.Item>
-              )}
-              locale={{ emptyText: '暂无场景' }}
-            />
+        <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+          <Upload
+            accept=".txt,.md,.text"
+            showUploadList={false}
+            beforeUpload={handleFileUpload}
+            disabled={isPolling}
+          >
+            <Button
+              icon={<UploadOutlined />}
+              disabled={isPolling}
+              loading={uploading}
+            >
+              {uploading ? '上传中...' : '上传文件'}
+            </Button>
+          </Upload>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            支持 .txt、.md 等文本格式
+          </Text>
+        </div>
+
+        <TextArea
+          value={novelText}
+          onChange={(e) => setNovelText(e.target.value)}
+          placeholder="在此粘贴或输入小说文本…"
+          rows={20}
+          maxLength={MAX_CHARS}
+          showCount
+          disabled={isPolling}
+          style={{ fontSize: 15, lineHeight: 1.7, marginBottom: 12 }}
+        />
+
+        {novelText.length > 40000 && (
+          <Text type="warning" style={{ display: 'block', marginBottom: 12 }}>
+            文本较长，AI 转换可能因 token 限制而截断，建议分段转换。
+          </Text>
+        )}
+
+        {isPolling && (
+          <div style={{ marginTop: 24 }}>
+            <TaskProgress status={status} progress={progress} />
           </div>
         )}
       </Card>
