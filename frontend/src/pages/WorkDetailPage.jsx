@@ -14,6 +14,7 @@ import {
   Spin,
   Badge,
   Divider,
+  message,
 } from 'antd';
 import {
   ArrowLeftOutlined,
