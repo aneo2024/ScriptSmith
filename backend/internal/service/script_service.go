@@ -248,6 +248,77 @@ func (s *ScriptService) UpdateScene(scriptID, sceneID string, scene model.Scene)
 	return s.scriptRepo.Update(script)
 }
 
+// AddContent 向指定场景添加一个新的内容块
+func (s *ScriptService) AddContent(scriptID, sceneID string, content model.SceneContent) error {
+	script, err := s.scriptRepo.Get(scriptID)
+	if err != nil {
+		return fmt.Errorf("剧本不存在: %w", err)
+	}
+
+	var scenes []model.Scene
+	if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
+		return fmt.Errorf("解析场景数据失败: %w", err)
+	}
+
+	found := false
+	for i := range scenes {
+		if scenes[i].ID == sceneID {
+			scenes[i].Content = append(scenes[i].Content, content)
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("场景 %s 不存在", sceneID)
+	}
+
+	scenesJSON, err := json.Marshal(scenes)
+	if err != nil {
+		return fmt.Errorf("序列化场景失败: %w", err)
+	}
+
+	script.Scenes = scenesJSON
+	return s.scriptRepo.Update(script)
+}
+
+// DeleteContent 从剧本中删除指定内容块
+func (s *ScriptService) DeleteContent(scriptID, contentID string) error {
+	script, err := s.scriptRepo.Get(scriptID)
+	if err != nil {
+		return fmt.Errorf("剧本不存在: %w", err)
+	}
+
+	var scenes []model.Scene
+	if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
+		return fmt.Errorf("解析场景数据失败: %w", err)
+	}
+
+	found := false
+	for i := range scenes {
+		for j := range scenes[i].Content {
+			if scenes[i].Content[j].ID == contentID {
+				scenes[i].Content = append(scenes[i].Content[:j], scenes[i].Content[j+1:]...)
+				found = true
+				break
+			}
+		}
+		if found {
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("内容块 %s 不存在", contentID)
+	}
+
+	scenesJSON, err := json.Marshal(scenes)
+	if err != nil {
+		return fmt.Errorf("序列化场景失败: %w", err)
+	}
+
+	script.Scenes = scenesJSON
+	return s.scriptRepo.Update(script)
+}
+
 // UpdateContent 更新指定剧本中的某个内容块
 func (s *ScriptService) UpdateContent(scriptID, contentID string, content model.SceneContent) error {
 	script, err := s.scriptRepo.Get(scriptID)

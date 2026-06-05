@@ -187,6 +187,56 @@ func (h *ScriptHandler) UpdateContent(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
+// AddContent 向指定场景添加内容块
+// POST /v1/scripts/:scriptID/scenes/:sceneID/contents
+func (h *ScriptHandler) AddContent(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+	sceneID := c.Param("sceneID")
+
+	var content model.SceneContent
+	if err := c.ShouldBindJSON(&content); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.svc.AddContent(scriptID, sceneID, content); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// DeleteContent 删除指定内容块
+// DELETE /v1/scripts/:scriptID/contents/:contentID
+func (h *ScriptHandler) DeleteContent(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+	contentID := c.Param("contentID")
+
+	if err := h.svc.DeleteContent(scriptID, contentID); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// GetScriptByParam 按 ID 获取剧本（先尝试 scriptID，再尝试 taskID）
+// GET /v1/scripts/:id
+func (h *ScriptHandler) GetScriptByParam(c *gin.Context) {
+	id := c.Param("id")
+
+	// 先尝试按 script ID 查找
+	script, err := h.svc.GetStructuredScript(id)
+	if err != nil {
+		// 再尝试按 task ID 查找
+		script, err = h.svc.GetScriptByTaskID(id)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "剧本不存在"})
+			return
+		}
+	}
+	c.JSON(http.StatusOK, script)
+}
+
 // RegisterRoutes 注册路由
 func (h *ScriptHandler) RegisterRoutes(r *gin.Engine) {
 	v1 := r.Group("/v1")
