@@ -257,16 +257,3 @@ func (h *WorkHandler) GetStats(c *gin.Context) {
 
 	OK(c, gin.H{"count": count, "total_words": totalWords})
 }
-
-// RegisterRoutes 注册路由
-func (h *WorkHandler) RegisterRoutes(r *gin.Engine) {
-	v1 := r.Group("/v1/works")
-	{
-		v1.POST("", h.CreateWork)
-		v1.GET("", h.ListWorks)
-		v1.GET("/count", h.GetWorkCount)
-		v1.GET("/:id", h.GetWork)
-		v1.PUT("/:id", h.UpdateWork)
-		v1.DELETE("/:id", h.DeleteWork)
-	}
-}

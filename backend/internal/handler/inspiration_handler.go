@@ -2,7 +2,6 @@ package handler
 
 import (
 	"log"
-	"net/http"
 	"scriptsmith/internal/ai"
 	"scriptsmith/internal/model"
 	"scriptsmith/internal/repository"
@@ -38,7 +37,7 @@ type CreateArticleRequest struct {
 func (h *InspirationHandler) CreateArticle(c *gin.Context) {
 	var req CreateArticleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ErrorBadRequest(c, err.Error())
 		return
 	}
 
@@ -63,18 +62,17 @@ func (h *InspirationHandler) CreateArticle(c *gin.Context) {
 	}
 
 	if err := h.articleRepo.CreateArticle(article); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
 
-	// 更新话题文章数
 	if article.TopicID != "" {
 		if err := h.articleRepo.UpdateTopicArticleCount(article.TopicID); err != nil {
 			log.Printf("更新话题文章数失败: %v", err)
 		}
 	}
 
-	c.JSON(http.StatusCreated, article)
+	Created(c, article)
 }
 
 // GetArticle 获取文章详情
@@ -83,18 +81,17 @@ func (h *InspirationHandler) GetArticle(c *gin.Context) {
 	id := c.Param("id")
 	article, err := h.articleRepo.GetArticle(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "文章不存在"})
+		ErrorNotFound(c, "文章不存在")
 		return
 	}
 
-	// 异步增加阅读量
 	go func() {
 		if err := h.articleRepo.IncrementViewCount(id); err != nil {
 			log.Printf("增加阅读量失败: %v", err)
 		}
 	}()
 
-	c.JSON(http.StatusOK, article)
+	OK(c, article)
 }
 
 // ListArticles 文章列表（支持分页和官方筛选）
@@ -116,13 +113,13 @@ func (h *InspirationHandler) ListArticles(c *gin.Context) {
 	if topicID != "" {
 		articles, total, err := h.articleRepo.ListArticlesByTopic(topicID, size, offset)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			ErrorInternal(c, err.Error())
 			return
 		}
 		if articles == nil {
 			articles = []model.Article{}
 		}
-		c.JSON(http.StatusOK, gin.H{
+		OK(c, gin.H{
 			"articles":  articles,
 			"total":     total,
 			"page":      page,
@@ -133,14 +130,14 @@ func (h *InspirationHandler) ListArticles(c *gin.Context) {
 
 	articles, total, err := h.articleRepo.ListArticles(size, offset, officialOnly)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
 	if articles == nil {
 		articles = []model.Article{}
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	OK(c, gin.H{
 		"articles":  articles,
 		"total":     total,
 		"page":      page,
@@ -153,10 +150,10 @@ func (h *InspirationHandler) ListArticles(c *gin.Context) {
 func (h *InspirationHandler) LikeArticle(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.articleRepo.IncrementLikeCount(id); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "文章不存在"})
+		ErrorNotFound(c, "文章不存在")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	OK(c, gin.H{"status": "ok"})
 }
 
 // ===================== 话题 =====================
@@ -172,7 +169,7 @@ type CreateTopicRequest struct {
 func (h *InspirationHandler) CreateTopic(c *gin.Context) {
 	var req CreateTopicRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ErrorBadRequest(c, err.Error())
 		return
 	}
 
@@ -185,11 +182,11 @@ func (h *InspirationHandler) CreateTopic(c *gin.Context) {
 	}
 
 	if err := h.articleRepo.CreateTopic(topic); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, topic)
+	Created(c, topic)
 }
 
 // ListTodayTopics 今日话题排行榜
@@ -197,13 +194,13 @@ func (h *InspirationHandler) CreateTopic(c *gin.Context) {
 func (h *InspirationHandler) ListTodayTopics(c *gin.Context) {
 	topics, err := h.articleRepo.ListTodayTopics(10)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
 	if topics == nil {
 		topics = []model.Topic{}
 	}
-	c.JSON(http.StatusOK, gin.H{"topics": topics})
+	OK(c, gin.H{"topics": topics})
 }
 
 // ListTopics 所有话题列表
@@ -222,13 +219,13 @@ func (h *InspirationHandler) ListTopics(c *gin.Context) {
 
 	topics, total, err := h.articleRepo.ListAllTopics(size, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
 	if topics == nil {
 		topics = []model.Topic{}
 	}
-	c.JSON(http.StatusOK, gin.H{
+	OK(c, gin.H{
 		"topics":    topics,
 		"total":     total,
 		"page":      page,
@@ -239,24 +236,23 @@ func (h *InspirationHandler) ListTopics(c *gin.Context) {
 // ===================== AI 生成官方文章 =====================
 
 type GenerateArticleRequest struct {
-	Topic string `json:"topic" binding:"required"` // 创作主题（如：人物塑造、开场技巧等）
+	Topic string `json:"topic" binding:"required"`
 }
 
-// GenerateArticle AI 自动生成一篇剧本创作知识文章（同步等待完成）
+// GenerateArticle AI 自动生成一篇剧本创作知识文章
 // POST /v1/inspiration/generate
 func (h *InspirationHandler) GenerateArticle(c *gin.Context) {
 	if h.aiClient == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "AI 服务未配置"})
+		ErrorInternal(c, "AI 服务未配置")
 		return
 	}
 
 	var req GenerateArticleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ErrorBadRequest(c, err.Error())
 		return
 	}
 
-	// 先创建话题
 	topic := &model.Topic{
 		ID:          uuid.New().String(),
 		Title:       req.Topic,
@@ -264,19 +260,17 @@ func (h *InspirationHandler) GenerateArticle(c *gin.Context) {
 		IsOfficial:  true,
 	}
 	if err := h.articleRepo.CreateTopic(topic); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建话题失败: " + err.Error()})
+		ErrorInternal(c, "创建话题失败: "+err.Error())
 		return
 	}
 
-	// 同步调用 AI 生成文章
 	content, err := h.aiClient.GenerateInspirationArticle(req.Topic)
 	if err != nil {
 		log.Printf("AI 生成灵感文章失败 (topic=%s): %v", req.Topic, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "AI 生成失败: " + err.Error()})
+		ErrorInternal(c, "AI 生成失败: "+err.Error())
 		return
 	}
 
-	// 从内容中提取标题和摘要
 	title := req.Topic
 	summary := ""
 	lines := strings.Split(content, "\n")
@@ -307,7 +301,7 @@ func (h *InspirationHandler) GenerateArticle(c *gin.Context) {
 
 	if err := h.articleRepo.CreateArticle(article); err != nil {
 		log.Printf("保存 AI 生成文章失败: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存文章失败: " + err.Error()})
+		ErrorInternal(c, "保存文章失败: "+err.Error())
 		return
 	}
 
@@ -317,7 +311,7 @@ func (h *InspirationHandler) GenerateArticle(c *gin.Context) {
 
 	log.Printf("AI 灵感文章已生成: %s (topic=%s)", title, req.Topic)
 
-	c.JSON(http.StatusCreated, gin.H{
+	Created(c, gin.H{
 		"article": article,
 		"topic":   topic,
 	})
