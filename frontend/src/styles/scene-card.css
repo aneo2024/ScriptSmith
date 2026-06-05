@@ -12,6 +12,51 @@
   border-bottom: 2px solid #333;
 }
 
+.scene-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.scene-edit-icon {
+  font-size: 14px;
+  color: #bbb;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.scene-edit-icon:hover {
+  color: #1890ff;
+  background: #e6f7ff;
+}
+
+/* 内容块编辑图标 - 悬停可见 */
+.content-edit-icon {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 13px;
+  color: #bbb;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: all 0.2s;
+}
+
+.content-block:hover .content-edit-icon {
+  opacity: 1;
+}
+
+.content-edit-icon:hover {
+  color: #1890ff;
+  background: #e6f7ff;
+}
+
 .slugline {
   font-size: 14px;
   font-weight: bold;
@@ -35,6 +80,7 @@
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.2s;
+  position: relative;
 }
 
 .content-block:hover {
@@ -176,4 +222,47 @@
 .edit-btn.cancel:hover {
   color: #ff4d4f;
   border-color: #ff4d4f;
+}
+
+/* Slugline 编辑 */
+.slugline-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.slugline-select {
+  padding: 4px 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  background: #fff;
+  cursor: pointer;
+}
+
+.slugline-select:focus {
+  border-color: #1890ff;
+  outline: none;
+}
+
+.slugline-name-input {
+  padding: 4px 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  width: 120px;
+}
+
+.slugline-name-input:focus {
+  border-color: #1890ff;
+  outline: none;
+}
+
+.slugline-dot {
+  color: #999;
+  font-size: 14px;
 }
