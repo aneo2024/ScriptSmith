@@ -108,6 +108,11 @@ func (s *ScriptService) GetScenes(taskID string) (json.RawMessage, error) {
 	return script.Scenes, nil
 }
 
+// ListTasks 获取所有任务（管理后台用）
+func (s *ScriptService) ListTasks() ([]*model.Task, error) {
+	return s.taskRepo.List()
+}
+
 // processInBackground 后台处理：processing → 调 AI → 解析 YAML 存 Script → completed/failed
 func (s *ScriptService) processInBackground(ctx context.Context, taskID string) {
 	defer func() {

@@ -6,6 +6,7 @@ import (
 	"os"
 	"scriptsmith/internal/ai"
 	"scriptsmith/internal/handler"
+	"scriptsmith/internal/middleware"
 	"scriptsmith/internal/model"
 	"scriptsmith/internal/repository"
 	"scriptsmith/internal/service"
@@ -40,8 +41,10 @@ func main() {
 	aiClient := ai.NewClient()
 	taskRepo := repository.NewTaskRepository(db)
 	scriptRepo := repository.NewScriptRepository(db)
+	userRepo := repository.NewUserRepository(db)
 	svc := service.NewScriptService(taskRepo, scriptRepo, aiClient)
 	h := handler.NewScriptHandler(svc)
+	authH := handler.NewAuthHandler(userRepo)
 
 	r := gin.Default()
 
@@ -56,7 +59,31 @@ func main() {
 		c.Next()
 	})
 
-	h.RegisterRoutes(r)
+	v1 := r.Group("/v1")
+	{
+		// 公开路由：无需认证
+		v1.GET("/health", h.HealthCheck)
+		v1.POST("/auth/register", authH.Register)
+		v1.POST("/auth/login", authH.Login)
+
+		// 需要认证的路由
+		auth := v1.Group("")
+		auth.Use(middleware.AuthMiddleware())
+		{
+			auth.POST("/convert", h.Convert)
+			auth.GET("/task/:id", h.GetTask)
+			auth.GET("/script/:id", h.GetScript)
+			auth.GET("/script/:id/characters", h.GetCharacters)
+			auth.GET("/script/:id/scenes", h.GetScenes)
+		}
+
+		// 管理路由：需要认证 + 管理员权限
+		admin := v1.Group("/admin")
+		admin.Use(middleware.AuthMiddleware(), middleware.AdminOnly())
+		{
+			admin.GET("/tasks", h.AdminListTasks)
+		}
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {

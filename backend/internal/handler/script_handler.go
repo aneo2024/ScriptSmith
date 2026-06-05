@@ -104,6 +104,17 @@ func (h *ScriptHandler) HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
+// AdminListTasks 管理员查看所有任务
+// GET /v1/admin/tasks
+func (h *ScriptHandler) AdminListTasks(c *gin.Context) {
+	tasks, err := h.svc.ListTasks()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"tasks": tasks})
+}
+
 // RegisterRoutes 注册路由
 func (h *ScriptHandler) RegisterRoutes(r *gin.Engine) {
 	v1 := r.Group("/v1")
