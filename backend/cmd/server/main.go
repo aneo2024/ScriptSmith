@@ -67,7 +67,7 @@ func main() {
 	svc := service.NewScriptService(taskRepo, scriptRepo, workRepo, providerRepo, aiClient)
 	h := handler.NewScriptHandler(svc)
 	authH := handler.NewAuthHandler(userRepo, refreshTokenRepo)
-	workH := handler.NewWorkHandler(workRepo, scriptRepo, taskRepo)
+	workH := handler.NewWorkHandler(workRepo, scriptRepo, taskRepo, providerRepo, aiClient)
 	inspirationH := handler.NewInspirationHandler(articleRepo, aiClient)
 	aiProviderH := handler.NewAIProviderHandler(providerRepo, aiClient)
 
@@ -125,6 +125,9 @@ func main() {
 			auth.GET("/works/:id", workH.GetWork)
 			auth.PUT("/works/:id", workH.UpdateWork)
 			auth.DELETE("/works/:id", workH.DeleteWork)
+
+			// 作品级 AI 角色设定（长相/年龄/性格/背景 — 全作品共享）
+			auth.POST("/works/:id/characters/profiles", workH.GenerateCharacterProfiles)
 
 			// 作品下的剧本列表
 			auth.GET("/works/:id/scripts", h.ListWorkScripts)

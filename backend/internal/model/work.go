@@ -6,13 +6,15 @@ import (
 	"gorm.io/datatypes"
 )
 
-// CharacterProfile 人物小传
+// CharacterProfile 人物小传（作品级，全作品共享的固定属性）
 type CharacterProfile struct {
-	Name       string `json:"name"`
-	Age        string `json:"age,omitempty"`
-	Gender     string `json:"gender,omitempty"`
-	Personality string `json:"personality,omitempty"`
-	AvatarURL  string `json:"avatar_url,omitempty"`
+	Name        string `json:"name"`
+	Age         string `json:"age,omitempty"`
+	Gender      string `json:"gender,omitempty"`
+	Appearance  string `json:"appearance,omitempty"`  // 长相/外貌/体型 — 固定，不随场景变
+	Personality string `json:"personality,omitempty"` // 性格
+	Background  string `json:"background,omitempty"`  // 背景故事
+	AvatarURL   string `json:"avatar_url,omitempty"`
 }
 
 type Work struct {

@@ -32,3 +32,6 @@ export const generateCharacterAppearances = (scriptId) =>
 
 export const generateSceneEnvironments = (scriptId) =>
   api.post(`/scripts/${scriptId}/scenes/environment`, {}, { timeout: 60000 }).then((r) => r.data);
+
+export const generateCharacterProfiles = (workId) =>
+  api.post(`/works/${workId}/characters/profiles`, {}, { timeout: 60000 }).then((r) => r.data);

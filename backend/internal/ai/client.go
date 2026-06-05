@@ -293,6 +293,56 @@ func (c *Client) generateSceneEnvironments(cfg ProviderConfig, scenesJSON string
 	return results, nil
 }
 
+// ============================ 作品级角色设定生成（人设卡） ============================
+
+// GenerateWorkCharacterProfiles 使用默认 provider
+func (c *Client) GenerateWorkCharacterProfiles(charactersJSON, synopsis string) ([]map[string]string, error) {
+	return c.generateWorkCharacterProfiles(c.defaultConfig, charactersJSON, synopsis)
+}
+
+// GenerateWorkCharacterProfilesWithConfig 使用指定 provider
+func (c *Client) GenerateWorkCharacterProfilesWithConfig(cfg ProviderConfig, charactersJSON, synopsis string) ([]map[string]string, error) {
+	return c.generateWorkCharacterProfiles(cfg, charactersJSON, synopsis)
+}
+
+func (c *Client) generateWorkCharacterProfiles(cfg ProviderConfig, charactersJSON, synopsis string) ([]map[string]string, error) {
+	systemPrompt := `你是一位资深人物设定师，擅长为剧本角色设计完整的人物小传。
+只输出 JSON 数组，每个元素包含角色固定属性，不要任何解释。`
+
+	userPrompt := fmt.Sprintf(`根据以下角色基本信息和剧情梗概，为每个角色生成完整的人物小传。
+
+角色列表（JSON）：
+%s
+
+剧情梗概：
+%s
+
+为每个角色生成以下固定属性（20-50字）：
+- appearance: 长相外貌特征（脸型、五官、体型、身高、肤色等固定生理特征）
+- age: 具体年龄或年龄范围
+- personality: 性格特质
+- background: 简要背景故事/身世
+
+输出格式（严格 JSON 数组）：
+[{"id": "char_1", "name": "角色名", "appearance": "长相描述...", "age": "年龄", "personality": "性格...", "background": "背景..."}]`, charactersJSON, synopsis)
+
+	content, err := c.chat(cfg, systemPrompt, userPrompt)
+	if err != nil {
+		return nil, err
+	}
+
+	jsonStr := extractJSON(content)
+	if jsonStr == "" {
+		return nil, fmt.Errorf("AI 返回中未找到 JSON 数据")
+	}
+
+	var results []map[string]string
+	if err := json.Unmarshal([]byte(jsonStr), &results); err != nil {
+		return nil, fmt.Errorf("解析角色设定失败: %w\n原始数据: %s", err, jsonStr)
+	}
+	return results, nil
+}
+
 // ============================ Prompt 与 JSON 抽取 ============================
 
 func buildPrompt(novelText, format, style string) string {

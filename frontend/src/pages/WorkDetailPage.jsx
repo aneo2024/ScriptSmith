@@ -41,6 +41,7 @@ import {
   generateScriptSummary,
   generateCharacterAppearances,
   generateSceneEnvironments,
+  generateCharacterProfiles,
 } from '../services/work';
 
 const { Title, Text, Paragraph } = Typography;
@@ -225,6 +226,23 @@ export default function WorkDetailPage() {
   const [generatingSummaries, setGeneratingSummaries] = useState(new Set());
   const [generatingAppearances, setGeneratingAppearances] = useState(new Set());
   const [generatingEnvironments, setGeneratingEnvironments] = useState(new Set());
+  const [generatingProfiles, setGeneratingProfiles] = useState(false);
+
+  const handleGenerateProfiles = async () => {
+    setGeneratingProfiles(true);
+    try {
+      const { profiles } = await generateCharacterProfiles(id);
+      setWork((prev) => ({
+        ...prev,
+        character_profiles: profiles,
+      }));
+      message.success(`已生成 ${profiles?.length || 0} 个角色设定`);
+    } catch (err) {
+      message.error('生成角色设定失败: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setGeneratingProfiles(false);
+    }
+  };
 
   const handleGenerateSummary = async (scriptId) => {
     setGeneratingSummaries((prev) => new Set(prev).add(scriptId));
@@ -475,7 +493,7 @@ export default function WorkDetailPage() {
                   loading={generatingAppearances.has(script.id)}
                   onClick={() => handleGenerateAppearances(script.id)}
                 >
-                  生成角色外貌
+                  生成角色装扮
                 </Button>
                 <Button
                   size="small"
@@ -699,12 +717,22 @@ export default function WorkDetailPage() {
                               {char.name?.[0]}
                             </div>
                             <Text strong>{char.name}</Text>
-                            {char.age && <Tag>{char.age}岁</Tag>}
+                            {char.age && <Tag>{char.age}{char.age.includes('岁') ? '' : '岁'}</Tag>}
                             {char.gender && <Tag>{char.gender}</Tag>}
                           </div>
+                          {char.appearance && (
+                            <Paragraph type="secondary" style={{ margin: '0 0 4px 0', fontSize: 12 }} ellipsis={{ rows: 2 }}>
+                              <Text type="secondary" style={{ fontSize: 11 }}>外貌：</Text>{char.appearance}
+                            </Paragraph>
+                          )}
                           {char.personality && (
+                            <Paragraph type="secondary" style={{ margin: '0 0 4px 0', fontSize: 12 }} ellipsis={{ rows: 2 }}>
+                              <Text type="secondary" style={{ fontSize: 11 }}>性格：</Text>{char.personality}
+                            </Paragraph>
+                          )}
+                          {char.background && (
                             <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }} ellipsis={{ rows: 2 }}>
-                              {char.personality}
+                              <Text type="secondary" style={{ fontSize: 11 }}>背景：</Text>{char.background}
                             </Paragraph>
                           )}
                         </Card>
@@ -725,6 +753,14 @@ export default function WorkDetailPage() {
           onClick={() => navigate(`/create-work?workId=${id}`)}
         >
           生成新剧集
+        </Button>
+        <Button
+          icon={generatingProfiles ? <LoadingOutlined /> : <TeamOutlined />}
+          loading={generatingProfiles}
+          onClick={handleGenerateProfiles}
+          disabled={scripts.length === 0}
+        >
+          生成角色设定
         </Button>
         <Text type="secondary" style={{ fontSize: 13, alignSelf: 'center' }}>
           点击剧集标签旁的 <EditOutlined /> 图标即可编辑对应集
