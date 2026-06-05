@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"scriptsmith/internal/ai"
@@ -13,10 +12,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-
-	_ "modernc.org/sqlite"
 )
 
 func main() {
@@ -24,20 +21,19 @@ func main() {
 	_ = godotenv.Load(".env")
 	_ = godotenv.Load("../../.env")
 
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "scriptsmith.db"
+	dbDSN := os.Getenv("DB_DSN")
+	if dbDSN == "" {
+		dbDSN = "postgres://postgres:postgres@localhost:5432/scriptsmith?sslmode=disable"
 	}
 
-	dsn := fmt.Sprintf("file:%s?cache=shared&_fk=1", dbPath)
-	db, err := gorm.Open(sqlite.Dialector{DSN: dsn, DriverName: "sqlite"}, &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dbDSN), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
 	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}, &model.Work{}); err != nil {
 		log.Fatalf("迁移表结构失败: %v", err)
 	}
-	log.Printf("数据库已就绪: %s", dbPath)
+	log.Printf("数据库已就绪")
 
 	aiClient := ai.NewClient()
 	taskRepo := repository.NewTaskRepository(db)
