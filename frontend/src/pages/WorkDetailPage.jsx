@@ -13,6 +13,7 @@ import {
   Collapse,
   Spin,
   Badge,
+  Divider,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -25,9 +26,12 @@ import {
   PlayCircleOutlined,
   PlusOutlined,
   FileTextOutlined,
+  ReadOutlined,
+  BulbOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
 import { parseScript, characterTypeLabel, characterTypeColor } from '../utils/parseScript';
-import { getWork, listWorkScripts } from '../services/work';
+import { getWork, listWorkScripts, deleteWork, generateScriptSummary } from '../services/work';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -192,6 +196,26 @@ export default function WorkDetailPage() {
   const [scripts, setScripts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeScriptId, setActiveScriptId] = useState(null);
+  const [generatingSummaries, setGeneratingSummaries] = useState(new Set());
+
+  const handleGenerateSummary = async (scriptId) => {
+    setGeneratingSummaries((prev) => new Set(prev).add(scriptId));
+    try {
+      const { summary } = await generateScriptSummary(scriptId);
+      setScripts((prev) =>
+        prev.map((s) => (s.id === scriptId ? { ...s, summary } : s))
+      );
+      message.success('梗概已生成');
+    } catch (err) {
+      message.error('生成梗概失败: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setGeneratingSummaries((prev) => {
+        const next = new Set(prev);
+        next.delete(scriptId);
+        return next;
+      });
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -273,6 +297,38 @@ export default function WorkDetailPage() {
     ),
   }));
 
+  // 生成剧集梗概
+  const generateEpisodeSummary = (scenes) => {
+    if (!scenes || scenes.length === 0) return null;
+
+    const totalScenes = scenes.length;
+    const allChars = new Set();
+    const sceneCards = scenes.map((scene, idx) => {
+      (scene.characters_present || []).forEach((c) => allChars.add(c));
+      
+      // 取场景的第一条 action 作为概况描述
+      const firstAction = scene.content?.find((c) => c.type === 'action');
+      const sluglineText = scene.slugline
+        ? (typeof scene.slugline === 'object'
+            ? `${scene.slugline.type === 'interior' ? '内' : scene.slugline.type === 'exterior' ? '外' : ''} · ${scene.slugline.name} · ${scene.slugline.time === 'night' ? '夜' : scene.slugline.time === 'dawn' ? '黎明' : scene.slugline.time === 'dusk' ? '黄昏' : '日'}`
+            : scene.slugline)
+        : '';
+
+      return { idx, scene, firstAction, sluglineText };
+    });
+
+    const dialogueCount = scenes.reduce(
+      (sum, s) => sum + (s.content || []).filter((c) => c.type === 'dialogue').length,
+      0
+    );
+    const actionCount = scenes.reduce(
+      (sum, s) => sum + (s.content || []).filter((c) => c.type === 'action').length,
+      0
+    );
+
+    return { totalScenes, allChars, sceneCards, dialogueCount, actionCount };
+  };
+
   const renderScriptDetail = (script) => {
     let scenes = [];
     let characters = [];
@@ -291,7 +347,157 @@ export default function WorkDetailPage() {
       }
     } catch {}
 
+    const summary = generateEpisodeSummary(scenes);
+
     const contentTabs = [
+      {
+        key: 'summary',
+        label: (
+          <span>
+            <ReadOutlined /> 剧集梗概
+          </span>
+        ),
+        children: summary ? (
+          <div>
+            {/* 一句话梗概 */}
+            <Card
+              size="small"
+              style={{
+                marginBottom: 20,
+                background: script.summary ? '#f6ffed' : '#fafafa',
+                borderColor: script.summary ? '#b7eb8f' : '#d9d9d9',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <Text strong style={{ fontSize: 13, color: '#3a6b28', display: 'block', marginBottom: 8 }}>
+                    <BulbOutlined /> 本集梗概
+                  </Text>
+                  {script.summary ? (
+                    <Paragraph
+                      style={{
+                        margin: 0,
+                        fontSize: 15,
+                        lineHeight: 1.8,
+                        color: '#333',
+                      }}
+                    >
+                      {script.summary}
+                    </Paragraph>
+                  ) : (
+                    <Text type="secondary" style={{ fontSize: 14 }}>
+                      尚未生成梗概，点击右侧按钮让 AI 自动生成一句话摘要
+                    </Text>
+                  )}
+                </div>
+                <Button
+                  type={script.summary ? 'default' : 'primary'}
+                  size="small"
+                  icon={generatingSummaries.has(script.id) ? <LoadingOutlined /> : <BulbOutlined />}
+                  loading={generatingSummaries.has(script.id)}
+                  onClick={() => handleGenerateSummary(script.id)}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  {script.summary ? '重新生成' : 'AI 生成梗概'}
+                </Button>
+              </div>
+            </Card>
+
+            {/* 概览统计 */}
+            <Row gutter={16} style={{ marginBottom: 20 }}>
+              <Col span={6}>
+                <Card size="small" style={{ textAlign: 'center', background: '#f6ffed' }}>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: '#3a6b28' }}>{summary.totalScenes}</div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>场 景</Text>
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" style={{ textAlign: 'center', background: '#e6f7ff' }}>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: '#1890ff' }}>{summary.allChars.size}</div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>出场角色</Text>
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" style={{ textAlign: 'center', background: '#fff7e6' }}>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: '#fa8c16' }}>{summary.dialogueCount}</div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>句对白</Text>
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small" style={{ textAlign: 'center', background: '#f9f0ff' }}>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: '#722ed1' }}>{summary.actionCount}</div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>条动作</Text>
+                </Card>
+              </Col>
+            </Row>
+
+            {/* 出场角色一览 */}
+            {summary.allChars.size > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <Text strong>
+                  <TeamOutlined style={{ marginRight: 4 }} />
+                  本集出场角色：
+                </Text>
+                <div style={{ marginTop: 8 }}>
+                  {[...summary.allChars].map((name) => (
+                    <Tag key={name} color="blue" style={{ marginBottom: 4 }}>
+                      {name}
+                    </Tag>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Divider style={{ margin: '12px 0' }} />
+
+            {/* 逐场梗概 */}
+            <Text strong style={{ display: 'block', marginBottom: 12 }}>
+              <UnorderedListOutlined style={{ marginRight: 4 }} />
+              逐场概述
+            </Text>
+            {summary.sceneCards.map(({ idx, scene, firstAction, sluglineText }) => (
+              <Card
+                key={scene.id || idx}
+                size="small"
+                style={{ marginBottom: 12 }}
+                title={
+                  <span>
+                    <Tag color="blue">{idx + 1}</Tag>
+                    {scene.title || `场景 ${idx + 1}`}
+                  </span>
+                }
+              >
+                {sluglineText && (
+                  <Paragraph style={{ marginBottom: 6 }}>
+                    <EnvironmentOutlined style={{ marginRight: 4 }} />
+                    <Text code style={{ fontSize: 12 }}>{sluglineText}</Text>
+                  </Paragraph>
+                )}
+                {firstAction && (
+                  <Paragraph
+                    style={{
+                      margin: 0,
+                      fontSize: 14,
+                      lineHeight: 1.7,
+                      color: '#555',
+                    }}
+                    ellipsis={{ rows: 4 }}
+                  >
+                    {firstAction.description || firstAction.text || ''}
+                  </Paragraph>
+                )}
+                {!firstAction && (
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    暂无动作描述
+                  </Text>
+                )}
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Empty description="暂无剧集数据" />
+        ),
+      },
       {
         key: 'scenes',
         label: (

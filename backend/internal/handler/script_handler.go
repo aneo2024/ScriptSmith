@@ -279,6 +279,19 @@ func (h *ScriptHandler) SaveScript(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
+// GenerateSummary AI 生成剧本一句话梗概
+// POST /v1/scripts/:scriptID/summary
+func (h *ScriptHandler) GenerateSummary(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+
+	summary, err := h.svc.GenerateSummary(scriptID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"summary": summary})
+}
+
 // RegisterRoutes 注册路由
 func (h *ScriptHandler) RegisterRoutes(r *gin.Engine) {
 	v1 := r.Group("/v1")
@@ -294,6 +307,7 @@ func (h *ScriptHandler) RegisterRoutes(r *gin.Engine) {
 		v1.GET("/scripts/:scriptID", h.GetStructuredScript)
 		v1.GET("/scripts/:scriptID/yaml", h.ExportYAML)
 		v1.PUT("/scripts/:scriptID", h.SaveScript)
+		v1.POST("/scripts/:scriptID/summary", h.GenerateSummary)
 		v1.PUT("/scripts/:scriptID/scenes/:sceneID", h.UpdateScene)
 		v1.PUT("/scripts/:scriptID/contents/:contentID", h.UpdateContent)
 	}

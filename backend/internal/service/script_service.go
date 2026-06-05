@@ -272,6 +272,47 @@ func (s *ScriptService) UpdateScene(scriptID, sceneID string, scene model.Scene)
 	return s.scriptRepo.Update(script)
 }
 
+// GenerateSummary 用 AI 生成剧本一句话梗概并保存
+func (s *ScriptService) GenerateSummary(scriptID string) (string, error) {
+	script, err := s.scriptRepo.Get(scriptID)
+	if err != nil {
+		return "", fmt.Errorf("剧本不存在: %w", err)
+	}
+
+	// 将 scenes JSON 转为可读文本
+	var scenes []model.Scene
+	if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
+		return "", fmt.Errorf("解析场景数据失败: %w", err)
+	}
+
+	// 构建精简的场景描述给 AI
+	var sb strings.Builder
+	for _, sc := range scenes {
+		sb.WriteString(fmt.Sprintf("场景%d: %s\n", sc.Sequence, sc.Title))
+		for _, c := range sc.Content {
+			switch c.Type {
+			case "action":
+				sb.WriteString(fmt.Sprintf("  [动作] %s\n", c.Description))
+			case "dialogue":
+				sb.WriteString(fmt.Sprintf("  [%s] %s\n", c.CharacterName, c.Text))
+			}
+		}
+	}
+
+	summary, err := s.aiClient.GenerateScriptSummary(sb.String())
+	if err != nil {
+		return "", fmt.Errorf("AI 生成梗概失败: %w", err)
+	}
+
+	summary = strings.TrimSpace(summary)
+	script.Summary = summary
+	if err := s.scriptRepo.Update(script); err != nil {
+		return "", fmt.Errorf("保存梗概失败: %w", err)
+	}
+
+	return summary, nil
+}
+
 // SaveScript 全量保存剧本（编辑后整体提交）
 func (s *ScriptService) SaveScript(scriptID string, updated *model.Script) error {
 	_, err := s.scriptRepo.Get(scriptID)
