@@ -19,11 +19,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // 避免在登录页重复跳转
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      // 登录接口的 401 是密码错误，不需要清除已有 token
+      const isAuthRequest = error.config?.url?.includes('/auth/login');
+      if (!isAuthRequest) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);

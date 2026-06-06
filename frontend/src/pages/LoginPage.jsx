@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Form, Input, Button, Tabs, message, Typography } from 'antd';
+import { Card, Form, Input, Button, Tabs, message, Typography, Alert } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
 import { register } from '../services/auth';
@@ -10,17 +10,21 @@ const { Title, Text } = Typography;
 export default function LoginPage() {
   const [tab, setTab] = useState('login');
   const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [registerError, setRegisterError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (values) => {
     setLoading(true);
+    setLoginError('');
     try {
       await login(values.username, values.password);
       message.success('登录成功');
       navigate('/', { replace: true });
     } catch (err) {
-      message.error(err.response?.data?.error || '登录失败');
+      const msg = err.response?.data?.error || '登录失败，请检查用户名和密码';
+      setLoginError(msg);
     } finally {
       setLoading(false);
     }
@@ -28,15 +32,23 @@ export default function LoginPage() {
 
   const handleRegister = async (values) => {
     setLoading(true);
+    setRegisterError('');
     try {
       await register(values.username, values.password, values.email || '');
       message.success('注册成功，请登录');
       setTab('login');
     } catch (err) {
-      message.error(err.response?.data?.error || '注册失败');
+      const msg = err.response?.data?.error || '注册失败，请稍后重试';
+      setRegisterError(msg);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTabChange = (key) => {
+    setTab(key);
+    setLoginError('');
+    setRegisterError('');
   };
 
   const tabItems = [
@@ -45,6 +57,9 @@ export default function LoginPage() {
       label: '登录',
       children: (
         <Form onFinish={handleLogin} size="large" style={{ marginTop: 8 }}>
+          {loginError && (
+            <Alert message={loginError} type="error" showIcon closable style={{ marginBottom: 16 }} />
+          )}
           <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
             <Input prefix={<UserOutlined />} placeholder="用户名" autoComplete="username" />
           </Form.Item>
@@ -64,6 +79,9 @@ export default function LoginPage() {
       label: '注册',
       children: (
         <Form onFinish={handleRegister} size="large" style={{ marginTop: 8 }}>
+          {registerError && (
+            <Alert message={registerError} type="error" showIcon closable style={{ marginBottom: 16 }} />
+          )}
           <Form.Item
             name="username"
             rules={[
@@ -112,7 +130,7 @@ export default function LoginPage() {
           </Title>
           <Text type="secondary">AI 驱动的剧本智能转换平台</Text>
         </div>
-        <Tabs activeKey={tab} onChange={setTab} centered items={tabItems} />
+        <Tabs activeKey={tab} onChange={handleTabChange} centered items={tabItems} />
       </Card>
     </div>
   );
