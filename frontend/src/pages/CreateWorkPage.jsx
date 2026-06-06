@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useCallback, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
   Button,
@@ -9,6 +9,7 @@ import {
   Upload,
   Select,
   Divider,
+  Tag,
 } from 'antd';
 import {
   UploadOutlined,
@@ -18,6 +19,7 @@ import {
 } from '@ant-design/icons';
 import { useTask } from '../hooks/useTask';
 import TaskProgress from '../components/TaskProgress';
+import { createWork, getWork } from '../services/work';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -35,14 +37,36 @@ const styleOptions = [
   { value: 'experimental', label: '实验性' },
 ];
 
+const formatMap = {
+  film: '电影',
+  tv_series: '电视剧',
+  stage_play: '舞台剧',
+};
+
 export default function CreateWorkPage() {
+  const [searchParams] = useSearchParams();
+  const existingWorkId = searchParams.get('workId');
+
   const [workTitle, setWorkTitle] = useState('');
   const [novelText, setNovelText] = useState('');
   const [uploading, setUploading] = useState(false);
   const [format, setFormat] = useState('film');
   const [style, setStyle] = useState('faithful');
+  const [saving, setSaving] = useState(false);
+  const [existingWork, setExistingWork] = useState(null);
   const navigate = useNavigate();
-  const { submit, status, progress, error, isActive, taskId, yaml } = useTask();
+  const { submit, status, progress, error, isActive, taskId } = useTask();
+
+  // 如果传入了 workId，加载已有作品信息
+  useEffect(() => {
+    if (existingWorkId) {
+      getWork(existingWorkId).then((w) => {
+        setExistingWork(w);
+        setWorkTitle(w.title);
+        setFormat(w.genre || 'film');
+      }).catch(() => {});
+    }
+  }, [existingWorkId]);
 
   const handleFileUpload = useCallback(async (file) => {
     setUploading(true);
@@ -72,7 +96,29 @@ export default function CreateWorkPage() {
       message.warning('请输入或上传小说文本');
       return;
     }
-    await submit(novelText, format, style);
+
+    setSaving(true);
+    try {
+      if (existingWorkId) {
+        // 已有作品：直接提交 AI 转换，关联到已有作品
+        await submit(novelText, format, style, existingWorkId);
+      } else {
+        // 新作品：先创建作品记录，再提交转换
+        const work = await createWork({
+          title: workTitle,
+          summary: '',
+          genre: format,
+          main_char: '',
+          supporting_chars: [],
+          word_count: novelText.length,
+        });
+        await submit(novelText, format, style, work.id);
+      }
+    } catch (err) {
+      message.error('操作失败: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (status === 'completed' && taskId) {
@@ -80,10 +126,17 @@ export default function CreateWorkPage() {
       <Card>
         <div style={{ textAlign: 'center', padding: '40px' }}>
           <Title level={3}>剧本生成成功！</Title>
-          <Text type="secondary">正在跳转到剧本工作台...</Text>
-          <div style={{ marginTop: 20 }}>
+          <Text type="secondary">
+            {existingWorkId
+              ? `已添加到作品「${existingWork?.title || workTitle}」`
+              : `作品「${workTitle}」已创建，剧本已自动关联`}
+          </Text>
+          <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'center' }}>
             <Button type="primary" onClick={() => navigate(`/editor?taskId=${taskId}`)}>
-              立即查看
+              查看剧本
+            </Button>
+            <Button onClick={() => navigate(existingWorkId ? `/works/${existingWorkId}` : '/works')}>
+              {existingWorkId ? '返回作品详情' : '返回作品列表'}
             </Button>
           </div>
         </div>
@@ -92,6 +145,7 @@ export default function CreateWorkPage() {
   }
 
   const isPolling = isActive || status === 'submitting';
+  const isExistingWork = !!existingWorkId;
 
   return (
     <div style={{ minHeight: '100%', display: 'flex', gap: 24 }}>
@@ -100,36 +154,34 @@ export default function CreateWorkPage() {
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <FileTextOutlined />
-            <span>创作新作品</span>
+            <span>{isExistingWork ? '添加新剧集' : '创作新作品'}</span>
           </div>
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div>
-            <Text strong>作品名</Text>
-            <Input
-              placeholder="请输入作品名称"
-              value={workTitle}
-              onChange={(e) => setWorkTitle(e.target.value)}
-              size="large"
-              style={{ marginTop: 8 }}
-              disabled={isPolling}
-            />
-          </div>
+          {isExistingWork ? (
+            <div>
+              <Text strong>作品</Text>
+              <div style={{ marginTop: 8, padding: '8px 12px', background: '#f5f5f5', borderRadius: 6, fontSize: 15 }}>
+                {workTitle}
+                <Tag style={{ marginLeft: 8 }}>{formatMap[format] || format}</Tag>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <Text strong>作品名</Text>
+              <Input
+                placeholder="请输入作品名称"
+                value={workTitle}
+                onChange={(e) => setWorkTitle(e.target.value)}
+                size="large"
+                style={{ marginTop: 8 }}
+                disabled={isPolling}
+              />
+            </div>
+          )}
 
           <Divider style={{ margin: '0' }} />
-
-          <div>
-            <Text strong>剧本格式</Text>
-            <Select
-              value={format}
-              onChange={setFormat}
-              options={formatOptions}
-              size="large"
-              disabled={isPolling}
-              style={{ width: '100%', marginTop: 8 }}
-            />
-          </div>
 
           <div>
             <Text strong>改编风格</Text>
@@ -149,26 +201,26 @@ export default function CreateWorkPage() {
             type="primary"
             icon={<ThunderboltOutlined />}
             block
-            loading={isPolling}
+            loading={isPolling || saving}
             onClick={handleGenerate}
             size="large"
           >
-            AI 生成剧本
+            {saving ? '提交中...' : isPolling ? 'AI 生成中...' : isExistingWork ? '生成新剧集' : 'AI 生成剧本'}
           </Button>
 
           <Button
             type="text"
             icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/works')}
+            onClick={() => navigate(isExistingWork ? `/works/${existingWorkId}` : '/works')}
           >
-            返回作品列表
+            {isExistingWork ? '返回作品详情' : '返回作品列表'}
           </Button>
         </div>
       </Card>
 
       <Card
         style={{ flex: 1 }}
-        title="第一步：输入小说文本"
+        title={isExistingWork ? `为「${workTitle}」输入新的小说文本` : '输入小说文本'}
       >
         {error && (
           <Card
