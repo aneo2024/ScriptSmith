@@ -7,6 +7,7 @@ import (
 	"scriptsmith/internal/ai"
 	"scriptsmith/internal/handler"
 	"scriptsmith/internal/middleware"
+	"scriptsmith/internal/middleware"
 	"scriptsmith/internal/model"
 	"scriptsmith/internal/repository"
 	"scriptsmith/internal/service"
@@ -34,6 +35,7 @@ func main() {
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
 	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}); err != nil {
 		log.Fatalf("迁移表结构失败: %v", err)
 	}
 	log.Printf("数据库已就绪: %s", dbPath)
@@ -42,8 +44,10 @@ func main() {
 	taskRepo := repository.NewTaskRepository(db)
 	scriptRepo := repository.NewScriptRepository(db)
 	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(db)
 	svc := service.NewScriptService(taskRepo, scriptRepo, aiClient)
 	h := handler.NewScriptHandler(svc)
+	authH := handler.NewAuthHandler(userRepo)
 	authH := handler.NewAuthHandler(userRepo)
 
 	r := gin.Default()
