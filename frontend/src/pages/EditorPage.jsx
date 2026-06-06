@@ -1,12 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Spin, Button, Typography, message } from 'antd';
-import { ArrowLeftOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Spin, Button, Typography, message, Select, Space } from 'antd';
+import { ArrowLeftOutlined, DownloadOutlined, SwapOutlined, FileTextOutlined } from '@ant-design/icons';
 import SceneNav from '../components/SceneNav';
 import SceneCard from '../components/SceneCard';
 import useScriptStore from '../store/scriptStore';
 import { useTask } from '../hooks/useTask';
 import { getScriptByTaskId, exportScriptYAML } from '../services/api';
+import { listWorkScripts } from '../services/work';
 import '../styles/script-editor.css';
 
 const { Title, Text } = Typography;
@@ -39,12 +40,16 @@ export default function EditorPage() {
   const [searchParams] = useSearchParams();
   const scriptId = searchParams.get('scriptId');
   const taskId = searchParams.get('taskId');
+  const workId = searchParams.get('workId');
 
   const isLoading = useScriptStore((s) => s.isLoading);
   const loadScript = useScriptStore((s) => s.loadScript);
   const setScript = useScriptStore((s) => s.setScript);
   const script = useScriptStore((s) => s.script);
   const { reset } = useTask();
+
+  // 剧集列表（当 workId 存在时加载）
+  const [episodes, setEpisodes] = useState([]);
 
   useEffect(() => {
     if (scriptId) {
@@ -56,10 +61,30 @@ export default function EditorPage() {
     }
   }, [scriptId, taskId]);
 
+  // 加载同一作品下的所有剧集，用于切换
+  useEffect(() => {
+    if (workId) {
+      listWorkScripts(workId).then((data) => {
+        setEpisodes(data.scripts || []);
+      }).catch(() => {});
+    }
+  }, [workId]);
+
   const hasParam = scriptId || taskId;
 
+  const handleBack = () => {
+    reset();
+    if (workId) {
+      navigate(`/works/${workId}`);
+    } else if (script?.work_id) {
+      navigate(`/works/${script.work_id}`);
+    } else {
+      navigate('/works');
+    }
+  };
+
   const handleExport = async () => {
-    const id = script.id;
+    const id = script?.id;
     if (!id) {
       message.warning('剧本数据未加载，无法导出');
       return;
@@ -78,6 +103,15 @@ export default function EditorPage() {
     }
   };
 
+  const handleSwitchEpisode = (epId) => {
+    loadScript(epId);
+    // 更新 URL 不刷新页面
+    const params = new URLSearchParams();
+    params.set('scriptId', epId);
+    if (workId) params.set('workId', workId);
+    window.history.replaceState(null, '', `/editor?${params.toString()}`);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
       {/* 顶部标题栏 */}
@@ -94,10 +128,7 @@ export default function EditorPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => {
-              reset();
-              navigate('/');
-            }}
+            onClick={handleBack}
           >
             返回
           </Button>
@@ -108,14 +139,36 @@ export default function EditorPage() {
             <Text type="secondary">— {script.metadata.title}</Text>
           )}
         </div>
-        {!hasParam && (
-          <Text type="warning">请通过 scriptId 或 taskId 参数打开剧本</Text>
-        )}
-        {script?.id && (
-          <Button icon={<DownloadOutlined />} onClick={handleExport}>
-            导出 YAML
-          </Button>
-        )}
+
+        <Space>
+          {/* 剧集切换器 */}
+          {episodes.length > 1 && (
+            <Select
+              value={scriptId}
+              onChange={handleSwitchEpisode}
+              style={{ width: 150 }}
+              placeholder="切换剧集"
+              suffixIcon={<SwapOutlined />}
+              options={episodes.map((ep) => ({
+                value: ep.id,
+                label: (
+                  <span>
+                    <FileTextOutlined style={{ marginRight: 6 }} />
+                    第{ep.episode || '?'}集
+                  </span>
+                ),
+              }))}
+            />
+          )}
+          {!hasParam && (
+            <Text type="warning">请通过 scriptId 或 taskId 参数打开剧本</Text>
+          )}
+          {script?.id && (
+            <Button icon={<DownloadOutlined />} onClick={handleExport}>
+              导出 YAML
+            </Button>
+          )}
+        </Space>
       </div>
 
       {/* 主体布局：左侧场景导航 + 右侧画布 */}

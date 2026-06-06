@@ -10,12 +10,16 @@ import {
   Select,
   Divider,
   Tag,
+  Space,
 } from 'antd';
 import {
   UploadOutlined,
   ThunderboltOutlined,
   ArrowLeftOutlined,
   FileTextOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { useTask } from '../hooks/useTask';
 import TaskProgress from '../components/TaskProgress';
@@ -43,21 +47,24 @@ const formatMap = {
   stage_play: '舞台剧',
 };
 
+const emptyChar = { name: '', age: '', gender: '', personality: '' };
+
 export default function CreateWorkPage() {
   const [searchParams] = useSearchParams();
   const existingWorkId = searchParams.get('workId');
 
   const [workTitle, setWorkTitle] = useState('');
+  const [synopsis, setSynopsis] = useState('');
   const [novelText, setNovelText] = useState('');
   const [uploading, setUploading] = useState(false);
   const [format, setFormat] = useState('film');
   const [style, setStyle] = useState('faithful');
   const [saving, setSaving] = useState(false);
   const [existingWork, setExistingWork] = useState(null);
+  const [characters, setCharacters] = useState([]);
   const navigate = useNavigate();
   const { submit, status, progress, error, isActive, taskId } = useTask();
 
-  // 如果传入了 workId，加载已有作品信息
   useEffect(() => {
     if (existingWorkId) {
       getWork(existingWorkId).then((w) => {
@@ -87,6 +94,20 @@ export default function CreateWorkPage() {
     return false;
   }, []);
 
+  const addCharacter = () => {
+    setCharacters([...characters, { ...emptyChar }]);
+  };
+
+  const removeCharacter = (index) => {
+    setCharacters(characters.filter((_, i) => i !== index));
+  };
+
+  const updateCharacter = (index, field, value) => {
+    setCharacters(characters.map((c, i) =>
+      i === index ? { ...c, [field]: value } : c
+    ));
+  };
+
   const handleGenerate = async () => {
     if (!workTitle.trim()) {
       message.warning('请先输入作品名');
@@ -99,16 +120,18 @@ export default function CreateWorkPage() {
 
     setSaving(true);
     try {
+      const validCharacters = characters.filter((c) => c.name.trim());
       if (existingWorkId) {
-        // 已有作品：直接提交 AI 转换，关联到已有作品
         await submit(novelText, format, style, existingWorkId);
       } else {
-        // 新作品：先创建作品记录，再提交转换
         const work = await createWork({
           title: workTitle,
+          synopsis: synopsis,
           summary: '',
+          cover_image: '',
           genre: format,
-          main_char: '',
+          main_char: validCharacters.length > 0 ? validCharacters[0].name : '',
+          character_profiles: validCharacters,
           supporting_chars: [],
           word_count: novelText.length,
         });
@@ -150,7 +173,8 @@ export default function CreateWorkPage() {
   return (
     <div style={{ minHeight: '100%', display: 'flex', gap: 24 }}>
       <Card
-        style={{ width: 360, flexShrink: 0 }}
+        style={{ width: 420, flexShrink: 0 }}
+        bodyStyle={{ maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <FileTextOutlined />
@@ -168,20 +192,119 @@ export default function CreateWorkPage() {
               </div>
             </div>
           ) : (
-            <div>
-              <Text strong>作品名</Text>
-              <Input
-                placeholder="请输入作品名称"
-                value={workTitle}
-                onChange={(e) => setWorkTitle(e.target.value)}
-                size="large"
-                style={{ marginTop: 8 }}
-                disabled={isPolling}
-              />
-            </div>
+            <>
+              <div>
+                <Text strong>作品名</Text>
+                <Input
+                  placeholder="请输入作品名称"
+                  value={workTitle}
+                  onChange={(e) => setWorkTitle(e.target.value)}
+                  size="large"
+                  style={{ marginTop: 8 }}
+                  disabled={isPolling}
+                />
+              </div>
+
+              <Divider style={{ margin: '0' }} />
+
+              <div>
+                <Text strong>一句话梗概</Text>
+                <Input
+                  placeholder="用一句话概括你的故事…"
+                  value={synopsis}
+                  onChange={(e) => setSynopsis(e.target.value)}
+                  style={{ marginTop: 8 }}
+                  disabled={isPolling}
+                  maxLength={100}
+                  showCount
+                />
+              </div>
+
+              <Divider style={{ margin: '0' }} />
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text strong>
+                    <UserOutlined style={{ marginRight: 4 }} />
+                    人物小传
+                  </Text>
+                  <Button
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={addCharacter}
+                    disabled={isPolling}
+                    type="dashed"
+                  >
+                    添加角色
+                  </Button>
+                </div>
+                {characters.length === 0 && (
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
+                    尚未添加角色，可点击"添加角色"手动录入，或留空由 AI 识别
+                  </Text>
+                )}
+                {characters.map((char, idx) => (
+                  <Card
+                    key={idx}
+                    size="small"
+                    style={{ marginTop: 8 }}
+                    extra={
+                      <Button
+                        type="text"
+                        size="small"
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => removeCharacter(idx)}
+                      />
+                    }
+                    title={<Text style={{ fontSize: 13 }}>角色 {idx + 1}</Text>}
+                  >
+                    <Space direction="vertical" style={{ width: '100%' }}>
+                      <Input
+                        size="small"
+                        placeholder="姓名"
+                        value={char.name}
+                        onChange={(e) => updateCharacter(idx, 'name', e.target.value)}
+                        disabled={isPolling}
+                      />
+                      <Space>
+                        <Input
+                          size="small"
+                          placeholder="年龄"
+                          value={char.age}
+                          onChange={(e) => updateCharacter(idx, 'age', e.target.value)}
+                          style={{ width: 80 }}
+                          disabled={isPolling}
+                        />
+                        <Select
+                          size="small"
+                          placeholder="性别"
+                          value={char.gender || undefined}
+                          onChange={(v) => updateCharacter(idx, 'gender', v)}
+                          style={{ width: 80 }}
+                          disabled={isPolling}
+                          options={[
+                            { value: '男', label: '男' },
+                            { value: '女', label: '女' },
+                          ]}
+                          allowClear
+                        />
+                      </Space>
+                      <Input
+                        size="small"
+                        placeholder="性格特点（如：勇敢果断、内敛沉稳…）"
+                        value={char.personality}
+                        onChange={(e) => updateCharacter(idx, 'personality', e.target.value)}
+                        disabled={isPolling}
+                      />
+                    </Space>
+                  </Card>
+                ))}
+              </div>
+            </>
           )}
 
-          <Divider style={{ margin: '0' }} />
+          {!isExistingWork && <Divider style={{ margin: '0' }} />}
 
           <div>
             <Text strong>改编风格</Text>

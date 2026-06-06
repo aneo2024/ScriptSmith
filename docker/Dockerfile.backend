@@ -3,7 +3,7 @@ FROM golang:1.24-alpine AS build
 
 WORKDIR /app
 
-# 安装 CGO 依赖（modernc.org/sqlite 纯 Go，无需 CGO）
+# 禁用 CGO（PostgreSQL 纯 Go 驱动，无需 CGO）
 ENV CGO_ENABLED=0
 
 COPY backend/go.mod backend/go.sum ./

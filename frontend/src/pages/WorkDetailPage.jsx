@@ -259,8 +259,16 @@ export default function WorkDetailPage() {
   const scriptTabItems = scripts.map((script) => ({
     key: script.id,
     label: (
-      <span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <FileTextOutlined /> 第{script.episode || scripts.indexOf(script) + 1}集
+        <EditOutlined
+          style={{ fontSize: 13, color: '#1890ff', cursor: 'pointer', padding: 2 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/editor?scriptId=${script.id}&workId=${id}`);
+          }}
+          title="编辑此集"
+        />
       </span>
     ),
   }));
@@ -331,6 +339,15 @@ export default function WorkDetailPage() {
     return <Tabs items={contentTabs} />;
   };
 
+  const workCharProfiles = (() => {
+    if (!work?.character_profiles) return [];
+    try {
+      return typeof work.character_profiles === 'string'
+        ? JSON.parse(work.character_profiles)
+        : work.character_profiles;
+    } catch { return []; }
+  })();
+
   return (
     <div style={{ minHeight: '100%' }}>
       <div
@@ -350,7 +367,66 @@ export default function WorkDetailPage() {
         </Title>
         <Badge count={`${scripts.length} 集`} style={{ backgroundColor: '#1890ff' }} />
         {work?.genre && <Tag>{work.genre === 'film' ? '电影' : work.genre === 'tv_series' ? '电视剧' : '舞台剧'}</Tag>}
+        {work?.status && <Tag color={work.status === 'draft' ? 'default' : 'green'}>{work.status === 'draft' ? '草稿' : work.status}</Tag>}
       </div>
+
+      {/* 作品信息卡：梗概 + 人物小传 */}
+      {(work?.synopsis || work?.cover_image || workCharProfiles.length > 0) && (
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          {work?.cover_image && (
+            <Col xs={24} md={6}>
+              <Card size="small" cover={
+                <div style={{
+                  height: 200,
+                  background: `url(${work.cover_image}) center/cover no-repeat`,
+                  borderRadius: '8px 8px 0 0',
+                }} />
+              } />
+            </Col>
+          )}
+          <Col xs={24} md={work?.cover_image ? 18 : 24}>
+            <Card size="small" style={{ height: '100%' }}>
+              {work?.synopsis && (
+                <div style={{ marginBottom: workCharProfiles.length > 0 ? 12 : 0 }}>
+                  <Text strong>一句话梗概：</Text>
+                  <Text>{work.synopsis}</Text>
+                </div>
+              )}
+              {workCharProfiles.length > 0 && (
+                <div>
+                  <Text strong>人物小传：</Text>
+                  <Row gutter={[12, 8]} style={{ marginTop: 8 }}>
+                    {workCharProfiles.map((char, i) => (
+                      <Col xs={24} sm={12} md={8} key={i}>
+                        <Card size="small" style={{ background: '#fafafa' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                            <div style={{
+                              width: 36, height: 36, borderRadius: '50%',
+                              background: `hsl(${(i * 60) % 360}, 40%, 60%)`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: '#fff', fontWeight: 'bold', fontSize: 14,
+                            }}>
+                              {char.name?.[0]}
+                            </div>
+                            <Text strong>{char.name}</Text>
+                            {char.age && <Tag>{char.age}岁</Tag>}
+                            {char.gender && <Tag>{char.gender}</Tag>}
+                          </div>
+                          {char.personality && (
+                            <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }} ellipsis={{ rows: 2 }}>
+                              {char.personality}
+                            </Paragraph>
+                          )}
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+                </div>
+              )}
+            </Card>
+          </Col>
+        </Row>
+      )}
 
       <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
         <Button
@@ -360,21 +436,19 @@ export default function WorkDetailPage() {
         >
           生成新剧集
         </Button>
-        {activeScript && (
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => navigate(`/editor?scriptId=${activeScript.id}`)}
-          >
-            打开剧本工作台
-          </Button>
-        )}
+        <Text type="secondary" style={{ fontSize: 13, alignSelf: 'center' }}>
+          点击剧集标签旁的 <EditOutlined /> 图标即可编辑对应集
+        </Text>
       </div>
 
       <Card bordered={false}>
         <Tabs
           activeKey={activeScriptId}
           onChange={setActiveScriptId}
-          items={scriptTabItems}
+          items={scriptTabItems.map((item) => ({
+            ...item,
+            children: null, // 内容由外部 renderScriptDetail 渲染
+          }))}
         />
         {activeScript && renderScriptDetail(activeScript)}
       </Card>
