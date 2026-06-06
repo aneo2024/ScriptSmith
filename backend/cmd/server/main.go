@@ -47,7 +47,7 @@ func main() {
 	svc := service.NewScriptService(taskRepo, scriptRepo, workRepo, aiClient)
 	h := handler.NewScriptHandler(svc)
 	authH := handler.NewAuthHandler(userRepo)
-	workH := handler.NewWorkHandler(workRepo)
+	workH := handler.NewWorkHandler(workRepo, scriptRepo, taskRepo)
 
 	r := gin.Default()
 

@@ -1,8 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import AppLayout from './components/Layout';
 import AuthGuard from './components/AuthGuard';
+import DashboardPage from './pages/DashboardPage';
 import NovelInputPage from './pages/NovelInputPage';
 import EditorPage from './pages/EditorPage';
 import WorkListPage from './pages/WorkListPage';
@@ -10,16 +11,14 @@ import WorkDetailPage from './pages/WorkDetailPage';
 import CreateWorkPage from './pages/CreateWorkPage';
 import LoginPage from './pages/LoginPage';
 import { TaskProvider } from './hooks/useTask';
-import { AuthProvider, useAuth } from './hooks/useAuth';
+import { AuthProvider } from './hooks/useAuth';
 
 function AppRoutes() {
-  const { isLoggedIn } = useAuth();
-
   return (
     <Routes>
       <Route
         path="/login"
-        element={isLoggedIn ? <Navigate to="/" replace /> : <LoginPage />}
+        element={<LoginPage />}
       />
       <Route
         path="/*"
@@ -27,10 +26,10 @@ function AppRoutes() {
           <AuthGuard>
             <AppLayout>
               <Routes>
+                <Route path="/" element={<DashboardPage />} />
                 <Route path="/works" element={<WorkListPage />} />
                 <Route path="/works/:id" element={<WorkDetailPage />} />
                 <Route path="/create-work" element={<CreateWorkPage />} />
-                <Route path="/" element={<Navigate to="/works" replace />} />
                 <Route path="/editor" element={<EditorPage />} />
                 <Route path="/novel-input" element={<NovelInputPage />} />
                 <Route path="*" element={<WorkListPage />} />
@@ -45,7 +44,7 @@ function AppRoutes() {
 
 function App() {
   return (
-    <ConfigProvider locale={zhCN} theme={{ token: { colorPrimary: '#1677ff' } }}>
+    <ConfigProvider locale={zhCN} theme={{ token: { colorPrimary: '#3a6b28' } }}>
       <AuthProvider>
         <TaskProvider>
           <BrowserRouter>
