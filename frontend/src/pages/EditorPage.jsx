@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Spin, Button, Typography } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import { Spin, Button, Typography, message } from 'antd';
+import { ArrowLeftOutlined, DownloadOutlined } from '@ant-design/icons';
 import SceneNav from '../components/SceneNav';
 import SceneCard from '../components/SceneCard';
 import useScriptStore from '../store/scriptStore';
-import { getScriptByTaskId } from '../services/api';
+import { useTask } from '../hooks/useTask';
+import { getScriptByTaskId, exportScriptYAML } from '../services/api';
 import '../styles/script-editor.css';
 
 const { Title, Text } = Typography;
@@ -43,6 +44,7 @@ export default function EditorPage() {
   const loadScript = useScriptStore((s) => s.loadScript);
   const setScript = useScriptStore((s) => s.setScript);
   const script = useScriptStore((s) => s.script);
+  const { reset } = useTask();
 
   useEffect(() => {
     if (scriptId) {
@@ -55,6 +57,26 @@ export default function EditorPage() {
   }, [scriptId, taskId]);
 
   const hasParam = scriptId || taskId;
+
+  const handleExport = async () => {
+    const id = script.id;
+    if (!id) {
+      message.warning('剧本数据未加载，无法导出');
+      return;
+    }
+    try {
+      const blob = await exportScriptYAML(id);
+      const url = URL.createObjectURL(new Blob([blob], { type: 'text/yaml' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${script.metadata?.title || 'script'}.yaml`;
+      a.click();
+      URL.revokeObjectURL(url);
+      message.success('YAML 导出成功');
+    } catch (err) {
+      message.error('导出失败: ' + (err.response?.data?.error || err.message));
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
@@ -72,7 +94,10 @@ export default function EditorPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/')}
+            onClick={() => {
+              reset();
+              navigate('/');
+            }}
           >
             返回
           </Button>
@@ -85,6 +110,11 @@ export default function EditorPage() {
         </div>
         {!hasParam && (
           <Text type="warning">请通过 scriptId 或 taskId 参数打开剧本</Text>
+        )}
+        {script?.id && (
+          <Button icon={<DownloadOutlined />} onClick={handleExport}>
+            导出 YAML
+          </Button>
         )}
       </div>
 

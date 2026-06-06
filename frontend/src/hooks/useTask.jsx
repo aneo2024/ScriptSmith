@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
-import { convertNovel, getTaskStatus, getScript } from '../services/api';
+import { convertNovel, getTaskStatus, getScriptByTaskId } from '../services/api';
 import { useRecentTasks } from './useRecentTasks';
 
 const TaskContext = createContext(null);
@@ -76,8 +76,9 @@ export function TaskProvider({ children }) {
         if (data.status === 'completed') {
           clearPolling();
           try {
-            const script = await getScript(taskId);
-            setYaml(script);
+            // 获取结构化剧本（不再使用旧的 YAML 接口）
+            const structuredScript = await getScriptByTaskId(taskId);
+            setYaml(structuredScript ? JSON.stringify(structuredScript).slice(0, 1) : 'ok');
             setPhase('completed');
           } catch (err) {
             setError(err.response?.data?.error || err.message || '获取剧本失败');

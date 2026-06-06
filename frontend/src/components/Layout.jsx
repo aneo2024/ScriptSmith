@@ -1,43 +1,57 @@
-import { useState } from 'react';
-import { Layout, Menu, Typography, Divider, Button, Space } from 'antd';
+import { useState, useEffect } from 'react';
+import { Layout, Menu, Typography, Divider, Button, Space, message } from 'antd';
 import {
-  FileTextOutlined,
-  EditOutlined,
-  TeamOutlined,
-  UnorderedListOutlined,
+  BookOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   LogoutOutlined,
+  PlusOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
-import RecentTasks from './RecentTasks';
 import { useAuth } from '../hooks/useAuth';
+import { getWorkCount } from '../services/work';
 
 const { Sider, Content, Header } = Layout;
 const { Title, Text } = Typography;
 
 const menuItems = [
-  { key: '/', icon: <FileTextOutlined />, label: '小说输入' },
-  { key: '/editor', icon: <EditOutlined />, label: '剧本工作台' },
-  { key: '/characters', icon: <TeamOutlined />, label: '角色管理' },
-  { key: '/scenes', icon: <UnorderedListOutlined />, label: '场景列表' },
+  { key: '/works', icon: <BookOutlined />, label: '作品列表' },
 ];
 
 export default function AppLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [workCount, setWorkCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
   const selectedKey = menuItems.some((m) => m.key === location.pathname)
     ? location.pathname
-    : '/';
+    : '';
+
+  useEffect(() => {
+    fetchWorkCount();
+  }, []);
+
+  const fetchWorkCount = async () => {
+    try {
+      const result = await getWorkCount();
+      setWorkCount(result.count || 0);
+    } catch (err) {
+      // 静默失败，不影响用户体验
+    }
+  };
 
   const handleMenuClick = ({ key }) => navigate(key);
 
   const handleLogout = () => {
     logout();
     navigate('/login', { replace: true });
+  };
+
+  const handleCreateWork = () => {
+    navigate('/create-work');
   };
 
   return (
@@ -59,6 +73,49 @@ export default function AppLayout({ children }) {
             </Text>
           )}
         </div>
+        {!collapsed && (
+          <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  background: '#1890ff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 12,
+                }}
+              >
+                <UserOutlined style={{ fontSize: 24, color: '#fff' }} />
+              </div>
+              <Text style={{ color: '#fff', fontWeight: 500 }}>{user?.username}</Text>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-around',
+                marginTop: 16,
+                paddingTop: 12,
+                borderTop: '1px solid rgba(255,255,255,0.1)',
+              }}
+            >
+              <div style={{ textAlign: 'center' }}>
+                <Text style={{ color: '#fff', fontSize: 18, fontWeight: 600 }}>{workCount}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>作品数</Text>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <Text style={{ color: '#fff', fontSize: 18, fontWeight: 600 }}>-</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>字数</Text>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <Text style={{ color: '#fff', fontSize: 18, fontWeight: 600 }}>-</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>访客</Text>
+              </div>
+            </div>
+          </div>
+        )}
         <Menu
           theme="dark"
           mode="inline"
@@ -67,7 +124,19 @@ export default function AppLayout({ children }) {
           onClick={handleMenuClick}
         />
         {!collapsed && <Divider style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '8px 0' }} />}
-        <RecentTasks collapsed={collapsed} />
+        {!collapsed && (
+          <div style={{ padding: '0 16px' }}>
+            <Button
+              type="primary"
+              block
+              icon={<PlusOutlined />}
+              onClick={handleCreateWork}
+              style={{ marginBottom: 16 }}
+            >
+              创作新作品
+            </Button>
+          </div>
+        )}
       </Sider>
       <Layout>
         <Header

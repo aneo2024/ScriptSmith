@@ -20,8 +20,9 @@ import (
 )
 
 func main() {
-	// 加载 .env 文件（不存在时静默忽略）
-	_ = godotenv.Load()
+	// 加载 .env 文件（从当前目录或上级目录查找）
+	_ = godotenv.Load(".env")
+	_ = godotenv.Load("../../.env")
 
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
@@ -33,7 +34,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
-	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}, &model.Work{}); err != nil {
 		log.Fatalf("迁移表结构失败: %v", err)
 	}
 	log.Printf("数据库已就绪: %s", dbPath)
@@ -42,9 +43,11 @@ func main() {
 	taskRepo := repository.NewTaskRepository(db)
 	scriptRepo := repository.NewScriptRepository(db)
 	userRepo := repository.NewUserRepository(db)
+	workRepo := repository.NewWorkRepository(db)
 	svc := service.NewScriptService(taskRepo, scriptRepo, aiClient)
 	h := handler.NewScriptHandler(svc)
 	authH := handler.NewAuthHandler(userRepo)
+	workH := handler.NewWorkHandler(workRepo)
 
 	r := gin.Default()
 
@@ -80,8 +83,18 @@ func main() {
 			// 结构化剧本 CRUD
 			auth.GET("/scripts/by-task/:taskID", h.GetScriptByTaskID)
 			auth.GET("/scripts/:scriptID", h.GetStructuredScript)
+			auth.GET("/scripts/:scriptID/yaml", h.ExportYAML)
+			auth.PUT("/scripts/:scriptID", h.SaveScript)
 			auth.PUT("/scripts/:scriptID/scenes/:sceneID", h.UpdateScene)
 			auth.PUT("/scripts/:scriptID/contents/:contentID", h.UpdateContent)
+
+			// 作品 CRUD
+			auth.POST("/works", workH.CreateWork)
+			auth.GET("/works", workH.ListWorks)
+			auth.GET("/works/count", workH.GetWorkCount)
+			auth.GET("/works/:id", workH.GetWork)
+			auth.PUT("/works/:id", workH.UpdateWork)
+			auth.DELETE("/works/:id", workH.DeleteWork)
 		}
 
 		// 管理路由：需要认证 + 管理员权限

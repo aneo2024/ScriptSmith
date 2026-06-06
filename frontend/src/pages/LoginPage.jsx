@@ -1,22 +1,29 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Form, Input, Button, Tabs, message, Typography } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
+import { Input, Button, Typography, message } from 'antd';
 import { useAuth } from '../hooks/useAuth';
-import { register } from '../services/auth';
+import { register as registerApi } from '../services/auth';
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 export default function LoginPage() {
-  const [tab, setTab] = useState('login');
+  const [mode, setMode] = useState('login');
   const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('');
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = async (values) => {
+  const handleLogin = async () => {
+    if (!username.trim() || !password) {
+      message.warning('请输入用户名和密码');
+      return;
+    }
     setLoading(true);
     try {
-      await login(values.username, values.password);
+      await login(username, password);
       message.success('登录成功');
       navigate('/', { replace: true });
     } catch (err) {
@@ -26,74 +33,24 @@ export default function LoginPage() {
     }
   };
 
-  const handleRegister = async (values) => {
+  const handleRegister = async () => {
+    if (!username.trim() || !password) {
+      message.warning('请填写必填字段');
+      return;
+    }
     setLoading(true);
     try {
-      await register(values.username, values.password, values.email || '');
+      await registerApi(username, password, email);
       message.success('注册成功，请登录');
-      setTab('login');
+      setMode('login');
+      setPassword('');
+      setEmail('');
     } catch (err) {
       message.error(err.response?.data?.error || '注册失败');
     } finally {
       setLoading(false);
     }
   };
-
-  const tabItems = [
-    {
-      key: 'login',
-      label: '登录',
-      children: (
-        <Form onFinish={handleLogin} size="large" style={{ marginTop: 8 }}>
-          <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-            <Input prefix={<UserOutlined />} placeholder="用户名" autoComplete="username" />
-          </Form.Item>
-          <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="密码" autoComplete="current-password" />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading} block>
-              登录
-            </Button>
-          </Form.Item>
-        </Form>
-      ),
-    },
-    {
-      key: 'register',
-      label: '注册',
-      children: (
-        <Form onFinish={handleRegister} size="large" style={{ marginTop: 8 }}>
-          <Form.Item
-            name="username"
-            rules={[
-              { required: true, message: '请输入用户名' },
-              { min: 3, message: '至少 3 个字符' },
-            ]}
-          >
-            <Input prefix={<UserOutlined />} placeholder="用户名（3-20位字母数字下划线）" />
-          </Form.Item>
-          <Form.Item name="email" rules={[{ type: 'email', message: '邮箱格式不正确' }]}>
-            <Input prefix={<MailOutlined />} placeholder="邮箱（选填）" />
-          </Form.Item>
-          <Form.Item
-            name="password"
-            rules={[
-              { required: true, message: '请输入密码' },
-              { min: 6, message: '至少 6 位' },
-            ]}
-          >
-            <Input.Password prefix={<LockOutlined />} placeholder="密码（至少6位）" />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading} block>
-              注册
-            </Button>
-          </Form.Item>
-        </Form>
-      ),
-    },
-  ];
 
   return (
     <div
@@ -102,18 +59,84 @@ export default function LoginPage() {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: '#f0f0f0',
       }}
     >
-      <Card style={{ width: 420, boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
-        <div style={{ textAlign: 'center', marginBottom: 16 }}>
-          <Title level={3} style={{ margin: 0 }}>
-            剧匠 ScriptSmith
+      <div
+        style={{
+          width: 400,
+          padding: 32,
+          borderRadius: 16,
+          background: '#fff',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+        }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <Title level={2} style={{ margin: 0, fontSize: 28, fontWeight: 700 }}>
+            剧匠
           </Title>
-          <Text type="secondary">AI 驱动的剧本智能转换平台</Text>
         </div>
-        <Tabs activeKey={tab} onChange={setTab} centered items={tabItems} />
-      </Card>
+
+        <Input
+          placeholder="用户名"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          size="large"
+          style={{ marginBottom: 16 }}
+          onPressEnter={mode === 'login' ? handleLogin : undefined}
+        />
+
+        {mode === 'register' && (
+          <Input
+            placeholder="邮箱（选填）"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            size="large"
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
+        <Input.Password
+          placeholder="密码"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          size="large"
+          style={{ marginBottom: 24 }}
+          onPressEnter={mode === 'login' ? handleLogin : handleRegister}
+        />
+
+        {mode === 'login' ? (
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Button
+              type="primary"
+              size="large"
+              loading={loading}
+              onClick={handleLogin}
+              style={{ flex: 1 }}
+            >
+              登录
+            </Button>
+            <Button size="large" onClick={() => setMode('register')} style={{ flex: 1 }}>
+              注册
+            </Button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Button
+              type="primary"
+              size="large"
+              loading={loading}
+              onClick={handleRegister}
+              block
+            >
+              注册
+            </Button>
+            <Button type="link" onClick={() => setMode('login')}>
+              已有账号？去登录
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

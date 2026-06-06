@@ -5,8 +5,9 @@ import AppLayout from './components/Layout';
 import AuthGuard from './components/AuthGuard';
 import NovelInputPage from './pages/NovelInputPage';
 import EditorPage from './pages/EditorPage';
-import CharacterListPage from './pages/CharacterListPage';
-import SceneListPage from './pages/SceneListPage';
+import WorkListPage from './pages/WorkListPage';
+import WorkDetailPage from './pages/WorkDetailPage';
+import CreateWorkPage from './pages/CreateWorkPage';
 import LoginPage from './pages/LoginPage';
 import { TaskProvider } from './hooks/useTask';
 import { AuthProvider, useAuth } from './hooks/useAuth';
@@ -16,23 +17,28 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={
-        isLoggedIn ? <Navigate to="/" replace /> : <LoginPage />
-      } />
-      {/* 受保护的路由 */}
-      <Route path="/*" element={
-        <AuthGuard>
-          <AppLayout>
-            <Routes>
-              <Route path="/" element={<NovelInputPage />} />
-              <Route path="/editor" element={<EditorPage />} />
-              <Route path="/characters" element={<CharacterListPage />} />
-              <Route path="/scenes" element={<SceneListPage />} />
-              <Route path="*" element={<NovelInputPage />} />
-            </Routes>
-          </AppLayout>
-        </AuthGuard>
-      } />
+      <Route
+        path="/login"
+        element={isLoggedIn ? <Navigate to="/" replace /> : <LoginPage />}
+      />
+      <Route
+        path="/*"
+        element={
+          <AuthGuard>
+            <AppLayout>
+              <Routes>
+                <Route path="/works" element={<WorkListPage />} />
+                <Route path="/works/:id" element={<WorkDetailPage />} />
+                <Route path="/create-work" element={<CreateWorkPage />} />
+                <Route path="/" element={<Navigate to="/works" replace />} />
+                <Route path="/editor" element={<EditorPage />} />
+                <Route path="/novel-input" element={<NovelInputPage />} />
+                <Route path="*" element={<WorkListPage />} />
+              </Routes>
+            </AppLayout>
+          </AuthGuard>
+        }
+      />
     </Routes>
   );
 }
