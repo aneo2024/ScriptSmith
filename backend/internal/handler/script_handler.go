@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"scriptsmith/internal/model"
 	"scriptsmith/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -31,6 +32,7 @@ func (h *ScriptHandler) Convert(c *gin.Context) {
 	}
 	userID := c.GetString("userID")
 	task, err := h.svc.ConvertNovel(req.NovelText, req.Format, req.Style, userID)
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -72,6 +74,7 @@ func (h *ScriptHandler) GetScript(c *gin.Context) {
 	userID := c.GetString("userID")
 	role := c.GetString("role")
 	yaml, err := h.svc.GetScript(id, userID, role)
+
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -87,6 +90,7 @@ func (h *ScriptHandler) GetCharacters(c *gin.Context) {
 	userID := c.GetString("userID")
 	role := c.GetString("role")
 	characters, err := h.svc.GetCharacters(id, userID, role)
+
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -101,6 +105,7 @@ func (h *ScriptHandler) GetScenes(c *gin.Context) {
 	userID := c.GetString("userID")
 	role := c.GetString("role")
 	scenes, err := h.svc.GetScenes(id, userID, role)
+
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -122,6 +127,68 @@ func (h *ScriptHandler) AdminListTasks(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"tasks": tasks})
+}
+
+// GetStructuredScript 获取结构化剧本的完整 JSON
+// GET /v1/scripts/:scriptID
+func (h *ScriptHandler) GetStructuredScript(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+	script, err := h.svc.GetStructuredScript(scriptID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, script)
+}
+
+// GetScriptByTaskID 按任务 ID 获取关联的结构化剧本
+// GET /v1/scripts/by-task/:taskID
+func (h *ScriptHandler) GetScriptByTaskID(c *gin.Context) {
+	taskID := c.Param("taskID")
+	script, err := h.svc.GetScriptByTaskID(taskID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, script)
+}
+
+// UpdateScene 更新剧本中的某个场景
+// PUT /v1/scripts/:scriptID/scenes/:sceneID
+func (h *ScriptHandler) UpdateScene(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+	sceneID := c.Param("sceneID")
+
+	var scene model.Scene
+	if err := c.ShouldBindJSON(&scene); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.svc.UpdateScene(scriptID, sceneID, scene); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// UpdateContent 更新剧本中的某个内容块
+// PUT /v1/scripts/:scriptID/contents/:contentID
+func (h *ScriptHandler) UpdateContent(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+	contentID := c.Param("contentID")
+
+	var content model.SceneContent
+	if err := c.ShouldBindJSON(&content); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.svc.UpdateContent(scriptID, contentID, content); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
 // RegisterRoutes 注册路由

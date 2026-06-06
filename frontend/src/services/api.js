@@ -19,14 +19,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // 登录接口的 401 是密码错误，不需要清除已有 token
-      const isAuthRequest = error.config?.url?.includes('/auth/login');
-      if (!isAuthRequest) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      // 避免在登录页重复跳转
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
       }
     }
     return Promise.reject(error);
@@ -46,3 +43,11 @@ export const getTaskStatus = (taskId) =>
 /** 获取转换完成的 YAML 剧本（纯文本） */
 export const getScript = (taskId) =>
   api.get(`/script/${taskId}`).then((r) => r.data);
+
+/** 获取结构化剧本（按 scriptId） */
+export const getStructuredScript = (scriptId) =>
+  api.get(`/scripts/${scriptId}`).then((r) => r.data);
+
+/** 按 taskId 获取关联的结构化剧本 */
+export const getScriptByTaskId = (taskId) =>
+  api.get(`/scripts/by-task/${taskId}`).then((r) => r.data);

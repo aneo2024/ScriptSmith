@@ -9,7 +9,7 @@ export const generatePrompt = (novelText, config) => `
 - 目标集数：${config?.episodes || 1}
 - 风格倾向：${config?.style || '保留原著风格'}
 
-## YAML Schema 结构
+## YAML Schema 结构（严格按此字段名输出）
 \`\`\`
 script:
   metadata:
@@ -29,15 +29,38 @@ script:
     - id: string
       sequence: integer
       title: string
-      slugline: string
-      location:
-        type: interior|exterior
+      slugline:
+        type: interior|exterior|both
         name: string
-        time: day|night|dawn|dusk
+        time: day|night|dawn|dusk|continuous
       characters_present: [string]
+      mood: string
       content:
-        - type: action|dialogue|transition|sound|note
-          [对应字段见详细说明]
+        # action 动作/描写
+        - id: string
+          type: action
+          description: string
+        # dialogue 对话
+        - id: string
+          type: dialogue
+          character_id: string
+          character_name: string
+          text: string
+          emotion: string
+          parenthetical: string
+        # transition 转场
+        - id: string
+          type: transition
+          transition_type: string
+        # sound 音效
+        - id: string
+          type: sound
+          sound_type: string
+          sound_description: string
+        # note 备注
+        - id: string
+          type: note
+          note_text: string
   adaptation_notes:
     - chapter: string
       scene_ids: [string]
@@ -56,9 +79,10 @@ ${novelText}
    - 每场景聚焦一个戏剧冲突点
    - 对话要口语化、有潜台词
    - 添加适当的转场和音效提示
-3. 生成完整的 slugline（如"内景·咖啡馆·夜"）
-4. 在 adaptation_notes 中记录所有改编决策
-5. 只输出YAML代码块，不要任何解释
+3. 每个内容项必须有唯一 id
+4. slugline 必须是包含 type/name/time 的对象（如 type: interior, name: 咖啡馆, time: night）
+5. 在 adaptation_notes 中记录所有改编决策
+6. 只输出YAML代码块，不要任何解释
 
 ## 输出
 \`\`\`yaml

@@ -104,7 +104,7 @@ func (s *ScriptService) GetCharacters(taskID, userID, role string) (json.RawMess
 	if len(script.Characters) == 0 || string(script.Characters) == "null" {
 		return json.RawMessage("[]"), nil
 	}
-	return script.Characters, nil
+	return json.RawMessage(script.Characters), nil
 }
 
 // GetScenes 获取场景列表
@@ -120,7 +120,7 @@ func (s *ScriptService) GetScenes(taskID, userID, role string) (json.RawMessage,
 	if len(script.Scenes) == 0 || string(script.Scenes) == "null" {
 		return json.RawMessage("[]"), nil
 	}
-	return script.Scenes, nil
+	return json.RawMessage(script.Scenes), nil
 }
 
 // ListAllTasks 获取所有任务（管理后台用）
@@ -173,6 +173,113 @@ func (s *ScriptService) processInBackground(ctx context.Context, taskID string) 
 		return
 	}
 	log.Printf("[task %s] 转换完成", taskID)
+}
+
+// CreateFromAI 调用 AI 生成结构化剧本并存入数据库
+func (s *ScriptService) CreateFromAI(taskID, novelText string) (*model.Script, error) {
+	script, err := s.aiClient.ConvertNovelToStructured(novelText)
+	if err != nil {
+		return nil, fmt.Errorf("AI 转换失败: %w", err)
+	}
+
+	script.ID = uuid.New().String()
+	script.TaskID = taskID
+	script.Version = 1
+
+	if err := s.scriptRepo.Create(script); err != nil {
+		return nil, fmt.Errorf("保存剧本失败: %w", err)
+	}
+
+	return script, nil
+}
+
+// GetStructuredScript 按脚本 ID 获取结构化剧本
+func (s *ScriptService) GetStructuredScript(scriptID string) (*model.Script, error) {
+	script, err := s.scriptRepo.Get(scriptID)
+	if err != nil {
+		return nil, fmt.Errorf("剧本不存在: %w", err)
+	}
+	return script, nil
+}
+
+// GetScriptByTaskID 按任务 ID 获取关联的结构化剧本
+func (s *ScriptService) GetScriptByTaskID(taskID string) (*model.Script, error) {
+	script, err := s.scriptRepo.GetByTaskID(taskID)
+	if err != nil {
+		return nil, fmt.Errorf("剧本不存在: %w", err)
+	}
+	return script, nil
+}
+
+// UpdateScene 更新指定剧本中的某个场景
+func (s *ScriptService) UpdateScene(scriptID, sceneID string, scene model.Scene) error {
+	script, err := s.scriptRepo.Get(scriptID)
+	if err != nil {
+		return fmt.Errorf("剧本不存在: %w", err)
+	}
+
+	var scenes []model.Scene
+	if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
+		return fmt.Errorf("解析场景数据失败: %w", err)
+	}
+
+	found := false
+	for i := range scenes {
+		if scenes[i].ID == sceneID {
+			scenes[i] = scene
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("场景 %s 不存在", sceneID)
+	}
+
+	scenesJSON, err := json.Marshal(scenes)
+	if err != nil {
+		return fmt.Errorf("序列化场景失败: %w", err)
+	}
+
+	script.Scenes = scenesJSON
+	return s.scriptRepo.Update(script)
+}
+
+// UpdateContent 更新指定剧本中的某个内容块
+func (s *ScriptService) UpdateContent(scriptID, contentID string, content model.SceneContent) error {
+	script, err := s.scriptRepo.Get(scriptID)
+	if err != nil {
+		return fmt.Errorf("剧本不存在: %w", err)
+	}
+
+	var scenes []model.Scene
+	if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
+		return fmt.Errorf("解析场景数据失败: %w", err)
+	}
+
+	found := false
+	for i := range scenes {
+		for j := range scenes[i].Content {
+			if scenes[i].Content[j].ID == contentID {
+				scenes[i].Content[j] = content
+				found = true
+				break
+			}
+		}
+		if found {
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("内容块 %s 不存在", contentID)
+	}
+
+	scenesJSON, err := json.Marshal(scenes)
+	if err != nil {
+		return fmt.Errorf("序列化场景失败: %w", err)
+	}
+
+	script.Scenes = scenesJSON
+	return s.scriptRepo.Update(script)
 }
 
 // saveScript 解析 YAML 并存入 Script 表
