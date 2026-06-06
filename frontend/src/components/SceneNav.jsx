@@ -17,11 +17,6 @@ export default function SceneNav() {
         {sorted.map((scene) => {
           const slugline = scene.slugline;
           const isActive = selectedSceneId === scene.id;
-          const sluglineText = typeof slugline === 'string'
-            ? slugline
-            : slugline
-              ? [slugline.type, slugline.name, slugline.time].filter(Boolean).join(' · ')
-              : '';
           return (
             <li
               key={scene.id}
@@ -34,9 +29,11 @@ export default function SceneNav() {
               <div className="script-editor__nav-item-title">
                 {scene.sequence ?? '-'}. {scene.title || '未命名场景'}
               </div>
-              {sluglineText && (
+              {slugline && (
                 <div className="script-editor__nav-item-meta">
-                  {sluglineText}
+                  {[slugline.type, slugline.name, slugline.time]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </div>
               )}
             </li>
