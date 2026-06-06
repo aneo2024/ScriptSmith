@@ -538,19 +538,23 @@ func (s *ScriptService) scriptToYAML(script *model.Script) (string, error) {
 	// 解析 metadata
 	var meta model.Metadata
 	if err := json.Unmarshal(script.Metadata, &meta); err != nil {
-		meta = model.Metadata{}
+		return "", fmt.Errorf("解析剧本元数据失败: %w", err)
 	}
 
 	// 解析 characters
 	var chars []model.Character
 	if len(script.Characters) > 0 && string(script.Characters) != "null" {
-		json.Unmarshal(script.Characters, &chars)
+		if err := json.Unmarshal(script.Characters, &chars); err != nil {
+			return "", fmt.Errorf("解析角色数据失败: %w", err)
+		}
 	}
 
 	// 解析 scenes
 	var scenes []model.Scene
 	if len(script.Scenes) > 0 && string(script.Scenes) != "null" {
-		json.Unmarshal(script.Scenes, &scenes)
+		if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
+			return "", fmt.Errorf("解析场景数据失败: %w", err)
+		}
 	}
 
 	// 构建 YAML 文档结构

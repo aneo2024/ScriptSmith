@@ -51,7 +51,7 @@ func NewClient() *Client {
 	if model == "" {
 		model = "deepseek-chat"
 	}
-	maxTokens := 16384
+	maxTokens := 32768
 	if v := os.Getenv("DEEPSEEK_MAX_TOKENS"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			maxTokens = n
@@ -185,9 +185,15 @@ func (c *Client) convertNovelToStructured(cfg ProviderConfig, novelText, format,
 		return nil, fmt.Errorf("AI 返回中未找到 JSON 数据")
 	}
 
+	// 检查 AI 是否返回了数组而非对象（如角色列表），给出更明确的错误提示
+	trimmed := strings.TrimSpace(jsonStr)
+	if strings.HasPrefix(trimmed, "[") {
+		return nil, fmt.Errorf("AI 返回了 JSON 数组而非剧本对象，请重试。原始数据(截取): %s", truncate(trimmed, 500))
+	}
+
 	var script model.Script
 	if err := json.Unmarshal([]byte(jsonStr), &script); err != nil {
-		return nil, fmt.Errorf("解析 JSON 剧本失败: %w\n原始数据: %s", err, jsonStr)
+		return nil, fmt.Errorf("解析 JSON 剧本失败: %w\n原始数据(截取): %s", err, truncate(jsonStr, 1000))
 	}
 	return &script, nil
 }
@@ -248,7 +254,7 @@ func (c *Client) generateCharacterAppearances(cfg ProviderConfig, charactersJSON
 
 	var results []map[string]string
 	if err := json.Unmarshal([]byte(jsonStr), &results); err != nil {
-		return nil, fmt.Errorf("解析角色外貌失败: %w\n原始数据: %s", err, jsonStr)
+		return nil, fmt.Errorf("解析角色外貌失败: %w\n原始数据(截取): %s", err, truncate(jsonStr, 500))
 	}
 	return results, nil
 }
@@ -288,7 +294,7 @@ func (c *Client) generateSceneEnvironments(cfg ProviderConfig, scenesJSON string
 
 	var results []map[string]string
 	if err := json.Unmarshal([]byte(jsonStr), &results); err != nil {
-		return nil, fmt.Errorf("解析场景环境失败: %w\n原始数据: %s", err, jsonStr)
+		return nil, fmt.Errorf("解析场景环境失败: %w\n原始数据(截取): %s", err, truncate(jsonStr, 500))
 	}
 	return results, nil
 }
@@ -338,7 +344,7 @@ func (c *Client) generateWorkCharacterProfiles(cfg ProviderConfig, charactersJSO
 
 	var results []map[string]string
 	if err := json.Unmarshal([]byte(jsonStr), &results); err != nil {
-		return nil, fmt.Errorf("解析角色设定失败: %w\n原始数据: %s", err, jsonStr)
+		return nil, fmt.Errorf("解析角色设定失败: %w\n原始数据(截取): %s", err, truncate(jsonStr, 500))
 	}
 	return results, nil
 }
@@ -385,28 +391,46 @@ script:
 %s`, format, style, novelText)
 }
 
-// extractJSON 从 AI 返回内容中提取 JSON 字符串，清理 markdown 代码块
+// extractJSON 从 AI 返回内容中提取 JSON 字符串。
+// 优先从 markdown 代码块提取；回退时用 json.Decoder 读取第一个完整 JSON 值，
+// 正确处理嵌套括号，避免跨对象截取导致的 "invalid character ',' after top-level value" 错误。
 func extractJSON(content string) string {
+	// 1) 优先匹配完整的 markdown json 代码块
 	if matches := jsonBlockRegex.FindStringSubmatch(content); len(matches) > 1 {
-		return matches[1]
+		if json.Valid([]byte(matches[1])) {
+			return matches[1]
+		}
 	}
+	// 2) 兼容截断的 markdown 代码块（遗漏结尾 ```）
 	if matches := jsonBlockRegexLoose.FindStringSubmatch(content); len(matches) > 1 {
-		return matches[1]
+		if json.Valid([]byte(matches[1])) {
+			return matches[1]
+		}
 	}
-	content = strings.TrimSpace(content)
-	// 优先匹配 JSON 数组 [...]
-	start := strings.Index(content, "[")
-	end := strings.LastIndex(content, "]")
-	if start >= 0 && end > start {
-		return content[start : end+1]
+
+	// 3) 用 json.Decoder 从第一个 { 或 [ 开始提取第一个完整 JSON 值
+	for i, ch := range content {
+		if ch == '{' || ch == '[' {
+			dec := json.NewDecoder(strings.NewReader(content[i:]))
+			var raw json.RawMessage
+			if err := dec.Decode(&raw); err == nil {
+				return string(raw)
+			}
+			// 解码失败则跳出，不再尝试后面的括号
+			break
+		}
 	}
-	// 回退匹配 JSON 对象 {...}
-	start = strings.Index(content, "{")
-	end = strings.LastIndex(content, "}")
-	if start >= 0 && end > start {
-		return content[start : end+1]
-	}
+
 	return ""
+}
+
+// truncate 截断字符串到指定长度，避免日志中打印过长的 AI 原始响应
+func truncate(s string, maxLen int) string {
+	runes := []rune(s)
+	if len(runes) <= maxLen {
+		return s
+	}
+	return string(runes[:maxLen]) + "...[已截断]"
 }
 
 // buildStructuredPrompt 构建结构化 JSON 输出的 Prompt
@@ -461,7 +485,7 @@ func buildStructuredPrompt(novelText, format, style string) string {
 3. 合并功能重复的次要角色
 4. 每场景聚焦一个戏剧冲突点
 5. 对话口语化，有潜台词
-6. 只输出 JSON，不含解释
+6. 用 json 代码块（三个反引号包裹）输出，不含任何其他解释
 
 JSON 结构体（严格按此结构输出）：
 {
