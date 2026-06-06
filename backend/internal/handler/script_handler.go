@@ -28,16 +28,16 @@ type ConvertRequest struct {
 func (h *ScriptHandler) Convert(c *gin.Context) {
 	var req ConvertRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ErrorBadRequest(c, err.Error())
 		return
 	}
 	userID := c.GetString("userID")
 	task, err := h.svc.ConvertNovel(req.NovelText, req.Format, req.Style, userID, req.WorkID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
+	OK(c, gin.H{
 		"task_id":  task.ID,
 		"status":   task.Status,
 		"progress": task.Progress,
@@ -52,10 +52,10 @@ func (h *ScriptHandler) GetTask(c *gin.Context) {
 	role := c.GetString("role")
 	task, err := h.svc.GetTask(id, userID, role)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		ErrorNotFound(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
+	OK(c, gin.H{
 		"id":         task.ID,
 		"status":     task.Status,
 		"progress":   task.Progress,
@@ -79,14 +79,14 @@ func (h *ScriptHandler) GetScript(c *gin.Context) {
 		if err.Error() == "剧本内容为空" {
 			yamlFromScript, err2 := h.svc.ExportYAMLByTaskID(id)
 			if err2 != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err2.Error()})
+				ErrorNotFound(c, err2.Error())
 				return
 			}
 			c.Header("Content-Type", "text/yaml; charset=utf-8")
 			c.String(http.StatusOK, yamlFromScript)
 			return
 		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ErrorNotFound(c, err.Error())
 		return
 	}
 	c.Header("Content-Type", "text/yaml; charset=utf-8")
@@ -101,10 +101,10 @@ func (h *ScriptHandler) GetCharacters(c *gin.Context) {
 	role := c.GetString("role")
 	characters, err := h.svc.GetCharacters(id, userID, role)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		ErrorNotFound(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, characters)
+	OK(c, characters)
 }
 
 // GetScenes 获取场景列表
@@ -115,15 +115,15 @@ func (h *ScriptHandler) GetScenes(c *gin.Context) {
 	role := c.GetString("role")
 	scenes, err := h.svc.GetScenes(id, userID, role)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		ErrorNotFound(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, scenes)
+	OK(c, scenes)
 }
 
 // HealthCheck 健康检查
 func (h *ScriptHandler) HealthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	OK(c, gin.H{"status": "ok"})
 }
 
 // AdminListTasks 管理员查看所有任务
@@ -131,10 +131,10 @@ func (h *ScriptHandler) HealthCheck(c *gin.Context) {
 func (h *ScriptHandler) AdminListTasks(c *gin.Context) {
 	tasks, err := h.svc.ListAllTasks()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"tasks": tasks})
+	OK(c, gin.H{"tasks": tasks})
 }
 
 // GetStructuredScript 获取结构化剧本的完整 JSON
@@ -143,10 +143,10 @@ func (h *ScriptHandler) GetStructuredScript(c *gin.Context) {
 	scriptID := c.Param("scriptID")
 	script, err := h.svc.GetStructuredScript(scriptID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		ErrorNotFound(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, script)
+	OK(c, script)
 }
 
 // GetScriptByTaskID 按任务 ID 获取关联的结构化剧本
@@ -155,10 +155,10 @@ func (h *ScriptHandler) GetScriptByTaskID(c *gin.Context) {
 	taskID := c.Param("taskID")
 	script, err := h.svc.GetScriptByTaskID(taskID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		ErrorNotFound(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, script)
+	OK(c, script)
 }
 
 // ListWorkScripts 获取作品下的所有剧本
@@ -167,13 +167,13 @@ func (h *ScriptHandler) ListWorkScripts(c *gin.Context) {
 	workID := c.Param("id")
 	scripts, err := h.svc.ListScriptsByWorkID(workID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
 	if scripts == nil {
 		scripts = []model.Script{}
 	}
-	c.JSON(http.StatusOK, gin.H{"scripts": scripts})
+	OK(c, gin.H{"scripts": scripts})
 }
 
 // UpdateScene 更新剧本中的某个场景
@@ -184,15 +184,15 @@ func (h *ScriptHandler) UpdateScene(c *gin.Context) {
 
 	var scene model.Scene
 	if err := c.ShouldBindJSON(&scene); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ErrorBadRequest(c, err.Error())
 		return
 	}
 
 	if err := h.svc.UpdateScene(scriptID, sceneID, scene); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		ErrorNotFound(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	OK(c, gin.H{"status": "ok"})
 }
 
 // UpdateContent 更新剧本中的某个内容块
@@ -203,15 +203,15 @@ func (h *ScriptHandler) UpdateContent(c *gin.Context) {
 
 	var content model.SceneContent
 	if err := c.ShouldBindJSON(&content); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ErrorBadRequest(c, err.Error())
 		return
 	}
 
 	if err := h.svc.UpdateContent(scriptID, contentID, content); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		ErrorNotFound(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	OK(c, gin.H{"status": "ok"})
 }
 
 // AddContent 向剧本的某个场景中添加内容块
@@ -222,16 +222,16 @@ func (h *ScriptHandler) AddContent(c *gin.Context) {
 
 	var content model.SceneContent
 	if err := c.ShouldBindJSON(&content); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ErrorBadRequest(c, err.Error())
 		return
 	}
 
 	created, err := h.svc.AddContent(scriptID, sceneID, content)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusCreated, created)
+	Created(c, created)
 }
 
 // DeleteContent 删除剧本中的某个内容块
@@ -241,19 +241,19 @@ func (h *ScriptHandler) DeleteContent(c *gin.Context) {
 	contentID := c.Param("contentID")
 
 	if err := h.svc.DeleteContent(scriptID, contentID); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		ErrorNotFound(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	OK(c, gin.H{"status": "ok"})
 }
 
-// ExportYAML 导出剧本为 YAML 格式
+// ExportYAML 导出剧本为 YAML 格式（纯文本响应，不 JSON 包装）
 // GET /v1/scripts/:scriptID/yaml
 func (h *ScriptHandler) ExportYAML(c *gin.Context) {
 	scriptID := c.Param("scriptID")
 	yamlStr, err := h.svc.ExportYAML(scriptID, "", "")
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		ErrorNotFound(c, err.Error())
 		return
 	}
 	c.Header("Content-Type", "text/yaml; charset=utf-8")
@@ -268,33 +268,26 @@ func (h *ScriptHandler) SaveScript(c *gin.Context) {
 
 	var script model.Script
 	if err := c.ShouldBindJSON(&script); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ErrorBadRequest(c, err.Error())
 		return
 	}
 
 	if err := h.svc.SaveScript(scriptID, &script); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ErrorInternal(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	OK(c, gin.H{"status": "ok"})
 }
 
-// RegisterRoutes 注册路由
-func (h *ScriptHandler) RegisterRoutes(r *gin.Engine) {
-	v1 := r.Group("/v1")
-	{
-		v1.GET("/health", h.HealthCheck)
-		v1.POST("/convert", h.Convert)
-		v1.GET("/task/:id", h.GetTask)
-		v1.GET("/script/:id", h.GetScript)
-		v1.GET("/script/:id/characters", h.GetCharacters)
-		v1.GET("/script/:id/scenes", h.GetScenes)
-		// 结构化剧本路由
-		v1.GET("/scripts/by-task/:taskID", h.GetScriptByTaskID)
-		v1.GET("/scripts/:scriptID", h.GetStructuredScript)
-		v1.GET("/scripts/:scriptID/yaml", h.ExportYAML)
-		v1.PUT("/scripts/:scriptID", h.SaveScript)
-		v1.PUT("/scripts/:scriptID/scenes/:sceneID", h.UpdateScene)
-		v1.PUT("/scripts/:scriptID/contents/:contentID", h.UpdateContent)
+// GenerateSummary AI 生成剧本一句话梗概
+// POST /v1/scripts/:scriptID/summary
+func (h *ScriptHandler) GenerateSummary(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+
+	summary, err := h.svc.GenerateSummary(scriptID)
+	if err != nil {
+		ErrorInternal(c, err.Error())
+		return
 	}
+	OK(c, gin.H{"summary": summary})
 }

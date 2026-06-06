@@ -27,14 +27,38 @@ function clearAuthAndRedirect() {
   }
 }
 
-// 响应拦截器：401 时自动静默刷新 token
+// 响应拦截器：
+//   成功 -> 自动解开 { success, code, message, data } 包装，把 response.data 替换为 payload
+//   失败 -> 从包装里读 message；401 触发静默刷新
+//   例外 -> responseType 为 blob 或 text（如 yaml 导出）时，原样返回，不尝试 JSON 解包
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const rt = response.config?.responseType;
+    if (rt === 'blob' || rt === 'text' || rt === 'arraybuffer') {
+      return response;
+    }
+
+    const wrapped = response.data;
+    if (
+      wrapped &&
+      typeof wrapped === 'object' &&
+      'success' in wrapped &&
+      'data' in wrapped
+    ) {
+      response.data = wrapped.data;
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
+    // 尝试从响应包装里读取更友好的错误消息
+    const wrapped = error.response?.data;
+    if (wrapped && typeof wrapped === 'object' && wrapped.message) {
+      error.message = wrapped.message;
+    }
+
     if (error.response?.status !== 401 || originalRequest._retry) {
-      // 不是 401 或已经重试过，直接失败
       return Promise.reject(error);
     }
 
@@ -44,24 +68,24 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // 防止并发刷新
     if (!isRefreshing) {
       isRefreshing = true;
-      refreshPromise = axios
-        .post('/v1/auth/refresh', { refresh_token: refreshToken })
-        .then((res) => {
-          const data = res.data;
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('refresh_token', data.refresh_token);
-          if (data.user_id) {
+      refreshPromise = api
+        .post('/auth/refresh', { refresh_token: refreshToken })
+        .then((r) => {
+          // 此时 r.data 已由成功拦截器解包 -> { token, refresh_token, user_id, username, role }
+          const d = r.data;
+          localStorage.setItem('token', d.token);
+          localStorage.setItem('refresh_token', d.refresh_token);
+          if (d.user_id) {
             localStorage.setItem('user', JSON.stringify({
-              user_id: data.user_id,
-              username: data.username,
-              role: data.role,
+              user_id: d.user_id,
+              username: d.username,
+              role: d.role,
             }));
           }
           isRefreshing = false;
-          return data.token;
+          return d.token;
         })
         .catch(() => {
           isRefreshing = false;
@@ -70,7 +94,6 @@ api.interceptors.response.use(
         });
     }
 
-    // 等待刷新完成，然后用新 token 重试原请求
     const newToken = await refreshPromise;
     if (!newToken) {
       return Promise.reject(error);
@@ -84,34 +107,28 @@ api.interceptors.response.use(
 
 export default api;
 
-/** 提交小说文本，返回 { task_id, status, progress } */
+// ============ 接口方法 ============
+
 export const convertNovel = (novelText, format, style, workId) =>
   api.post('/convert', { novel_text: novelText, format, style, work_id: workId }).then((r) => r.data);
 
-/** 查询任务状态，返回 { id, status, progress, format, style, created_at, updated_at, error_msg } */
 export const getTaskStatus = (taskId) =>
   api.get(`/task/${taskId}`).then((r) => r.data);
 
-/** 获取转换完成的 YAML 剧本（纯文本） */
 export const getScript = (taskId) =>
   api.get(`/script/${taskId}`).then((r) => r.data);
 
-/** 获取结构化剧本（按 scriptId） */
 export const getStructuredScript = (scriptId) =>
   api.get(`/scripts/${scriptId}`).then((r) => r.data);
 
-/** 按 taskId 获取关联的结构化剧本 */
 export const getScriptByTaskId = (taskId) =>
   api.get(`/scripts/by-task/${taskId}`).then((r) => r.data);
 
-/** 导出剧本 YAML（返回文本，触发下载） */
 export const exportScriptYAML = (scriptId) =>
   api.get(`/scripts/${scriptId}/yaml`, { responseType: 'blob' }).then((r) => r.data);
 
-/** 更新指定内容块 */
 export const updateContent = (scriptId, contentId, data) =>
   api.put(`/scripts/${scriptId}/contents/${contentId}`, data).then((r) => r.data);
 
-/** 更新指定场景 */
 export const updateScene = (scriptId, sceneId, data) =>
   api.put(`/scripts/${scriptId}/scenes/${sceneId}`, data).then((r) => r.data);

@@ -287,6 +287,23 @@ func extractJSON(content string) string {
 	return ""
 }
 
+// GenerateScriptSummary 根据剧本场景数据生成一句话梗概
+func (c *Client) GenerateScriptSummary(scenesJSON string) (string, error) {
+	if c.apiKey == "" {
+		return "", fmt.Errorf("DEEPSEEK_API_KEY 未配置")
+	}
+
+	systemPrompt := `你是一位资深剧本编辑，擅长用一句话概括一集剧本的核心内容。`
+
+	userPrompt := fmt.Sprintf(`请根据以下剧本的场景数据，用一句话（不超过50字）概括这一集的核心剧情。
+只输出这一句话梗概，不要任何额外的文字或标点修饰。
+
+场景数据：
+%s`, scenesJSON)
+
+	return c.callAI(userPrompt, systemPrompt)
+}
+
 // buildStructuredPrompt 构建结构化 JSON 输出的 Prompt
 func buildStructuredPrompt(novelText string) string {
 	return fmt.Sprintf(`将以下小说改编为剧本，以 JSON 格式输出。
