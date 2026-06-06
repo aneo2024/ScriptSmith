@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
 	"scriptsmith/internal/model"
 	"scriptsmith/internal/repository"
@@ -47,18 +48,19 @@ func (h *WorkHandler) CreateWork(c *gin.Context) {
 
 	userID := c.GetString("userID")
 	work := &model.Work{
-		ID:              uuid.New().String(),
-		UserID:          userID,
-		Title:           req.Title,
-		Summary:         req.Summary,
-		Status:          "draft",
-		Genre:           req.Genre,
-		MainChar:        req.MainChar,
-		WordCount:       req.WordCount,
+		ID:        uuid.New().String(),
+		UserID:    userID,
+		Title:     req.Title,
+		Summary:   req.Summary,
+		Status:    "draft",
+		Genre:     req.Genre,
+		MainChar:  req.MainChar,
+		WordCount: req.WordCount,
 	}
 
 	if len(req.SupportingChars) > 0 {
-		work.SupportingChars = req.SupportingChars
+		charsJSON, _ := json.Marshal(req.SupportingChars)
+		work.SupportingChars = charsJSON
 	}
 
 	if err := h.workRepo.Create(work); err != nil {
@@ -141,7 +143,8 @@ func (h *WorkHandler) UpdateWork(c *gin.Context) {
 		work.MainChar = req.MainChar
 	}
 	if len(req.SupportingChars) > 0 {
-		work.SupportingChars = req.SupportingChars
+		charsJSON2, _ := json.Marshal(req.SupportingChars)
+		work.SupportingChars = charsJSON2
 	}
 	if req.WordCount > 0 {
 		work.WordCount = req.WordCount
