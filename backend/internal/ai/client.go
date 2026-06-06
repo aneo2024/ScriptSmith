@@ -154,15 +154,16 @@ func buildPrompt(novelText, format, style string) string {
 2. 合并功能重复的次要角色
 3. 每场景聚焦一个戏剧冲突点
 4. 对话口语化，有潜台词
-5. 添加 slugline（内景/外景·地点·时间）
+5. 每个内容项必须有唯一 id
 6. 只输出YAML代码块
 
-YAML结构：
+YAML结构（严格按此字段名输出）：
 script:
   metadata:
     title: string
     original_title: string
     format: string
+    genre: string
   characters:
     - id: string
       name: string
@@ -172,11 +173,38 @@ script:
     - id: string
       sequence: integer
       title: string
-      slugline: string
+      slugline:
+        type: interior|exterior|both
+        name: string
+        time: day|night|dawn|dusk|continuous
       characters_present: [string]
+      mood: string
       content:
-        - type: action|dialogue|transition|sound|note
-          [对应字段]
+        # action 动作/描写
+        - id: string
+          type: action
+          description: string
+        # dialogue 对话
+        - id: string
+          type: dialogue
+          character_id: string
+          character_name: string
+          text: string
+          emotion: string
+          parenthetical: string
+        # transition 转场
+        - id: string
+          type: transition
+          transition_type: string
+        # sound 音效
+        - id: string
+          type: sound
+          sound_type: string
+          sound_description: string
+        # note 备注
+        - id: string
+          type: note
+          note_text: string
 
 小说文本：
 %s

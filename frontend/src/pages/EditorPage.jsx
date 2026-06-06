@@ -84,6 +84,11 @@ function SceneCanvas() {
   }
 
   const slugline = scene.slugline;
+  const sluglineText = typeof slugline === 'string'
+    ? slugline
+    : slugline
+      ? [slugline.type, slugline.name, slugline.time].filter(Boolean).join(' · ')
+      : '';
 
   return (
     <div className="script-editor__canvas">
@@ -91,11 +96,9 @@ function SceneCanvas() {
         第{scene.sequence}场 — {scene.title || '未命名场景'}
       </div>
 
-      {slugline && (
+      {sluglineText && (
         <div className="script-editor__canvas-slugline">
-          {[slugline.type, slugline.name, slugline.time]
-            .filter(Boolean)
-            .join(' · ')}
+          {sluglineText}
         </div>
       )}
 
