@@ -5,6 +5,36 @@ const api = axios.create({
   timeout: 10000,
 });
 
+// 请求拦截器：自动添加 Authorization header
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// 响应拦截器：401 时自动跳转登录页
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // 登录接口的 401 是密码错误，不需要清除已有 token
+      const isAuthRequest = error.config?.url?.includes('/auth/login');
+      if (!isAuthRequest) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      }
+    }
+    return Promise.reject(error);
+  },
+);
+
+export default api;
+
 /** 提交小说文本，返回 { task_id, status, progress } */
 export const convertNovel = (novelText, format, style) =>
   api.post('/convert', { novel_text: novelText, format, style }).then((r) => r.data);
