@@ -78,13 +78,7 @@ function SceneBlock({ scene }) {
           第{scene.sequence}场 — {scene.title}
         </Paragraph>
       )}
-      {scene.slugline && (
-        <div className="slugline">
-          {typeof scene.slugline === 'string'
-            ? scene.slugline
-            : [scene.slugline.type, scene.slugline.name, scene.slugline.time].filter(Boolean).join(' · ')}
-        </div>
-      )}
+      {scene.slugline && <div className="slugline">{scene.slugline}</div>}
       {scene.content?.map(renderContent)}
     </div>
   );

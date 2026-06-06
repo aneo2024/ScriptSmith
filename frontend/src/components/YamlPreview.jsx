@@ -38,13 +38,7 @@ export default function YamlPreview({ content }) {
 
       {script.scenes?.map((scene) => (
         <div key={scene.id || scene.sequence} className="scene">
-          <div className="slugline">
-            {typeof scene.slugline === 'string'
-              ? scene.slugline
-              : scene.slugline
-                ? [scene.slugline.type, scene.slugline.name, scene.slugline.time].filter(Boolean).join(' · ')
-                : ''}
-          </div>
+          <div className="slugline">{scene.slugline}</div>
           {scene.title && <p className="scene-title">{scene.title}</p>}
 
           {scene.content?.map((item, idx) => (

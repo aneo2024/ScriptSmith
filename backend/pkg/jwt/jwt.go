@@ -2,11 +2,24 @@ package jwt
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
 
 	jwtlib "github.com/golang-jwt/jwt/v5"
 )
+
+const defaultDevSecret = "scriptsmith-dev-secret-do-not-use-in-production"
+
+// getSecret 获取 JWT 密钥，开发环境未配置时使用默认值并警告
+func getSecret() string {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		log.Println("[WARN] JWT_SECRET 未配置，使用默认开发密钥（生产环境请务必设置）")
+		return defaultDevSecret
+	}
+	return secret
+}
 
 // Claims JWT 载荷
 type Claims struct {
@@ -17,10 +30,7 @@ type Claims struct {
 
 // GenerateToken 签发 JWT，有效期 72 小时
 func GenerateToken(userID, role string) (string, error) {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		return "", fmt.Errorf("JWT_SECRET 未配置")
-	}
+	secret := getSecret()
 
 	claims := Claims{
 		UserID: userID,
@@ -37,10 +47,7 @@ func GenerateToken(userID, role string) (string, error) {
 
 // ParseToken 解析并验证 JWT
 func ParseToken(tokenString string) (*Claims, error) {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		return nil, fmt.Errorf("JWT_SECRET 未配置")
-	}
+	secret := getSecret()
 
 	token, err := jwtlib.ParseWithClaims(tokenString, &Claims{}, func(t *jwtlib.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwtlib.SigningMethodHMAC); !ok {

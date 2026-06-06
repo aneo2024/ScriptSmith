@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,7 +9,6 @@ import (
 	"scriptsmith/internal/repository"
 
 	"github.com/google/uuid"
-	"gopkg.in/yaml.v3"
 )
 
 type ScriptService struct {
@@ -53,7 +51,7 @@ func (s *ScriptService) ConvertNovel(novelText, format, style, userID string) (*
 	}
 
 	// 异步 goroutine 调 AI，避免阻塞 HTTP 请求
-	go s.processInBackground(context.Background(), task.ID)
+	go s.processInBackground(task.ID)
 
 	return task, nil
 }
@@ -133,8 +131,8 @@ func (s *ScriptService) ListTasksByUser(userID string) ([]*model.Task, error) {
 	return s.taskRepo.ListByUser(userID)
 }
 
-// processInBackground 后台处理：processing → 调 AI → 解析 YAML 存 Script → completed/failed
-func (s *ScriptService) processInBackground(ctx context.Context, taskID string) {
+// processInBackground 后台处理：processing → 调 AI 得结构化 JSON → 存 Script → completed/failed
+func (s *ScriptService) processInBackground(taskID string) {
 	defer func() {
 		if r := recover(); r != nil {
 			_ = s.taskRepo.UpdateStatus(taskID, "failed", 0, "", fmt.Sprintf("后台处理异常: %v", r))
@@ -154,25 +152,31 @@ func (s *ScriptService) processInBackground(ctx context.Context, taskID string) 
 		return
 	}
 
-	// 调 AI
-	yamlStr, err := s.aiClient.ConvertNovel(task.NovelText, task.Format, task.Style)
+	// 调 AI，获取结构化 JSON 数据
+	script, err := s.aiClient.ConvertNovelToStructured(task.NovelText)
 	if err != nil {
 		_ = s.taskRepo.UpdateStatus(taskID, "failed", 0, "", err.Error())
 		log.Printf("[task %s] AI 转换失败: %v", taskID, err)
 		return
 	}
 
-	// 解析 YAML 提取结构化数据存入 Script 表
-	if err := s.saveScript(taskID, yamlStr); err != nil {
-		log.Printf("[task %s] 解析 YAML 存入 Script 失败（不影响任务完成）: %v", taskID, err)
+	// 填充 Script 表字段后存入数据库
+	script.ID = uuid.New().String()
+	script.TaskID = taskID
+	script.Version = 1
+	script.YAML = "" // 后续再补充 YAML 生成逻辑
+	if err := s.scriptRepo.Create(script); err != nil {
+		_ = s.taskRepo.UpdateStatus(taskID, "failed", 0, "", fmt.Sprintf("保存剧本失败: %v", err))
+		log.Printf("[task %s] 保存 Script 失败: %v", taskID, err)
+		return
 	}
 
-	// 更新 Task 为 completed
-	if err := s.taskRepo.UpdateStatus(taskID, "completed", 1.0, yamlStr, ""); err != nil {
+	// 更新 Task 为 completed（YAML 暂时留空）
+	if err := s.taskRepo.UpdateStatus(taskID, "completed", 1.0, "", ""); err != nil {
 		log.Printf("[task %s] 更新 completed 状态失败: %v", taskID, err)
 		return
 	}
-	log.Printf("[task %s] 转换完成", taskID)
+	log.Printf("[task %s] 转换完成，Script ID: %s", taskID, script.ID)
 }
 
 // CreateFromAI 调用 AI 生成结构化剧本并存入数据库
@@ -280,34 +284,4 @@ func (s *ScriptService) UpdateContent(scriptID, contentID string, content model.
 
 	script.Scenes = scenesJSON
 	return s.scriptRepo.Update(script)
-}
-
-// saveScript 解析 YAML 并存入 Script 表
-func (s *ScriptService) saveScript(taskID, yamlStr string) error {
-	// 解析 YAML
-	var parsed struct {
-		Script struct {
-			Metadata   interface{} `yaml:"metadata"`
-			Characters interface{} `yaml:"characters"`
-			Scenes     interface{} `yaml:"scenes"`
-		} `yaml:"script"`
-	}
-	if err := yaml.Unmarshal([]byte(yamlStr), &parsed); err != nil {
-		return fmt.Errorf("YAML 解析失败: %w", err)
-	}
-
-	metadataJSON, _ := json.Marshal(parsed.Script.Metadata)
-	charactersJSON, _ := json.Marshal(parsed.Script.Characters)
-	scenesJSON, _ := json.Marshal(parsed.Script.Scenes)
-
-	script := &model.Script{
-		ID:         uuid.New().String(),
-		TaskID:     taskID,
-		Metadata:   metadataJSON,
-		Characters: charactersJSON,
-		Scenes:     scenesJSON,
-		YAML:       yamlStr,
-	}
-
-	return s.scriptRepo.Create(script)
 }
