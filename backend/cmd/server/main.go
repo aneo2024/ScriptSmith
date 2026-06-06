@@ -44,7 +44,7 @@ func main() {
 	scriptRepo := repository.NewScriptRepository(db)
 	userRepo := repository.NewUserRepository(db)
 	workRepo := repository.NewWorkRepository(db)
-	svc := service.NewScriptService(taskRepo, scriptRepo, aiClient)
+	svc := service.NewScriptService(taskRepo, scriptRepo, workRepo, aiClient)
 	h := handler.NewScriptHandler(svc)
 	authH := handler.NewAuthHandler(userRepo)
 	workH := handler.NewWorkHandler(workRepo)
@@ -87,14 +87,20 @@ func main() {
 			auth.PUT("/scripts/:scriptID", h.SaveScript)
 			auth.PUT("/scripts/:scriptID/scenes/:sceneID", h.UpdateScene)
 			auth.PUT("/scripts/:scriptID/contents/:contentID", h.UpdateContent)
+			auth.POST("/scripts/:scriptID/scenes/:sceneID/contents", h.AddContent)
+			auth.DELETE("/scripts/:scriptID/contents/:contentID", h.DeleteContent)
 
 			// 作品 CRUD
 			auth.POST("/works", workH.CreateWork)
 			auth.GET("/works", workH.ListWorks)
+			auth.GET("/works/stats", workH.GetStats)
 			auth.GET("/works/count", workH.GetWorkCount)
 			auth.GET("/works/:id", workH.GetWork)
 			auth.PUT("/works/:id", workH.UpdateWork)
 			auth.DELETE("/works/:id", workH.DeleteWork)
+
+			// 作品下的剧本列表
+			auth.GET("/works/:id/scripts", h.ListWorkScripts)
 		}
 
 		// 管理路由：需要认证 + 管理员权限
