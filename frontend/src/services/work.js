@@ -23,3 +23,6 @@ export const getWorkStats = () =>
 
 export const listWorkScripts = (workId) =>
   api.get(`/works/${workId}/scripts`).then((r) => r.data);
+
+export const generateScriptSummary = (scriptId) =>
+  api.post(`/scripts/${scriptId}/summary`, {}, { timeout: 60000 }).then((r) => r.data);

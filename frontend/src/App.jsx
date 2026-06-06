@@ -9,6 +9,8 @@ import EditorPage from './pages/EditorPage';
 import WorkListPage from './pages/WorkListPage';
 import WorkDetailPage from './pages/WorkDetailPage';
 import CreateWorkPage from './pages/CreateWorkPage';
+import InspirationPage from './pages/InspirationPage';
+import ArticleDetailPage from './pages/ArticleDetailPage';
 import LoginPage from './pages/LoginPage';
 import { TaskProvider } from './hooks/useTask';
 import { AuthProvider } from './hooks/useAuth';
@@ -31,6 +33,8 @@ function AppRoutes() {
                 <Route path="/works/:id" element={<WorkDetailPage />} />
                 <Route path="/create-work" element={<CreateWorkPage />} />
                 <Route path="/editor" element={<EditorPage />} />
+                <Route path="/inspiration" element={<InspirationPage />} />
+                <Route path="/inspiration/article/:id" element={<ArticleDetailPage />} />
                 <Route path="/novel-input" element={<NovelInputPage />} />
                 <Route path="*" element={<WorkListPage />} />
               </Routes>

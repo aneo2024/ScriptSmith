@@ -12,9 +12,9 @@ import (
 	"scriptsmith/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -51,7 +51,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
-	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}, &model.Work{}, &model.RefreshToken{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}, &model.Work{}, &model.RefreshToken{}, &model.Article{}, &model.Topic{}); err != nil {
 		log.Fatalf("迁移表结构失败: %v", err)
 	}
 	log.Printf("数据库已就绪 (type=%s)", dbType)
@@ -62,10 +62,12 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	workRepo := repository.NewWorkRepository(db)
 	refreshTokenRepo := repository.NewRefreshTokenRepository(db)
+	articleRepo := repository.NewArticleRepository(db)
 	svc := service.NewScriptService(taskRepo, scriptRepo, workRepo, aiClient)
 	h := handler.NewScriptHandler(svc)
 	authH := handler.NewAuthHandler(userRepo, refreshTokenRepo)
 	workH := handler.NewWorkHandler(workRepo, scriptRepo, taskRepo)
+	inspirationH := handler.NewInspirationHandler(articleRepo, aiClient)
 
 	r := gin.Default()
 
@@ -105,7 +107,8 @@ func main() {
 			auth.GET("/scripts/:scriptID", h.GetStructuredScript)
 			auth.GET("/scripts/:scriptID/yaml", h.ExportYAML)
 			auth.PUT("/scripts/:scriptID", h.SaveScript)
-			auth.PUT("/scripts/:scriptID/scenes/:sceneID", h.UpdateScene)
+		auth.POST("/scripts/:scriptID/summary", h.GenerateSummary)
+		auth.PUT("/scripts/:scriptID/scenes/:sceneID", h.UpdateScene)
 			auth.PUT("/scripts/:scriptID/contents/:contentID", h.UpdateContent)
 			auth.POST("/scripts/:scriptID/scenes/:sceneID/contents", h.AddContent)
 			auth.DELETE("/scripts/:scriptID/contents/:contentID", h.DeleteContent)
@@ -121,6 +124,16 @@ func main() {
 
 			// 作品下的剧本列表
 			auth.GET("/works/:id/scripts", h.ListWorkScripts)
+
+			// 灵感文章 & 话题
+			auth.POST("/inspiration/articles", inspirationH.CreateArticle)
+			auth.GET("/inspiration/articles", inspirationH.ListArticles)
+			auth.GET("/inspiration/articles/:id", inspirationH.GetArticle)
+			auth.POST("/inspiration/articles/:id/like", inspirationH.LikeArticle)
+			auth.POST("/inspiration/generate", inspirationH.GenerateArticle)
+			auth.GET("/inspiration/topics", inspirationH.ListTopics)
+			auth.GET("/inspiration/topics/today", inspirationH.ListTodayTopics)
+			auth.POST("/inspiration/topics", inspirationH.CreateTopic)
 		}
 
 		// 管理路由：需要认证 + 管理员权限
