@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"gopkg.in/yaml.v3"
 )
 
 type ScriptService struct {
@@ -306,28 +307,28 @@ func (s *ScriptService) scriptToYAML(script *model.Script) (string, error) {
 	}
 
 	type contentLineYAML struct {
-		Type            string `yaml:"type,omitempty"`
-		Description     string `yaml:"description,omitempty"`
-		CharacterName   string `yaml:"character_name,omitempty"`
-		Text            string `yaml:"text,omitempty"`
-		Parenthetical   string `yaml:"parenthetical,omitempty"`
-		TransitionType  string `yaml:"transition_type,omitempty"`
-		SoundType       string `yaml:"sound_type,omitempty"`
-		SoundDesc       string `yaml:"sound_description,omitempty"`
+		Type           string `yaml:"type,omitempty"`
+		Description    string `yaml:"description,omitempty"`
+		CharacterName  string `yaml:"character_name,omitempty"`
+		Text           string `yaml:"text,omitempty"`
+		Parenthetical  string `yaml:"parenthetical,omitempty"`
+		TransitionType string `yaml:"transition_type,omitempty"`
+		SoundType      string `yaml:"sound_type,omitempty"`
+		SoundDesc      string `yaml:"sound_description,omitempty"`
 	}
 
 	type sceneYAML struct {
-		Sequence int              `yaml:"sequence"`
-		Title    string           `yaml:"title"`
-		Slugline sluglineYAML     `yaml:"slugline"`
+		Sequence int               `yaml:"sequence"`
+		Title    string            `yaml:"title"`
+		Slugline sluglineYAML      `yaml:"slugline"`
 		Content  []contentLineYAML `yaml:"content"`
 	}
 
 	doc := map[string]interface{}{
-		"title":         meta.Title,
+		"title":          meta.Title,
 		"original_title": meta.OriginalTitle,
-		"format":        meta.Format,
-		"genre":         meta.Genre,
+		"format":         meta.Format,
+		"genre":          meta.Genre,
 	}
 
 	if len(chars) > 0 {
