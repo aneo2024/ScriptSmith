@@ -20,6 +20,7 @@ type ConvertRequest struct {
 	NovelText string `json:"novel_text" binding:"required"`
 	Format    string `json:"format"`
 	Style     string `json:"style"`
+	WorkID    string `json:"work_id"`
 }
 
 // Convert 提交小说，返回任务ID（立即返回，后台异步调 AI）
@@ -31,7 +32,7 @@ func (h *ScriptHandler) Convert(c *gin.Context) {
 		return
 	}
 	userID := c.GetString("userID")
-	task, err := h.svc.ConvertNovel(req.NovelText, req.Format, req.Style, userID)
+	task, err := h.svc.ConvertNovel(req.NovelText, req.Format, req.Style, userID, req.WorkID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -160,6 +161,21 @@ func (h *ScriptHandler) GetScriptByTaskID(c *gin.Context) {
 	c.JSON(http.StatusOK, script)
 }
 
+// ListWorkScripts 获取作品下的所有剧本
+// GET /v1/works/:id/scripts
+func (h *ScriptHandler) ListWorkScripts(c *gin.Context) {
+	workID := c.Param("id")
+	scripts, err := h.svc.ListScriptsByWorkID(workID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if scripts == nil {
+		scripts = []model.Script{}
+	}
+	c.JSON(http.StatusOK, gin.H{"scripts": scripts})
+}
+
 // UpdateScene 更新剧本中的某个场景
 // PUT /v1/scripts/:scriptID/scenes/:sceneID
 func (h *ScriptHandler) UpdateScene(c *gin.Context) {
@@ -192,6 +208,39 @@ func (h *ScriptHandler) UpdateContent(c *gin.Context) {
 	}
 
 	if err := h.svc.UpdateContent(scriptID, contentID, content); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// AddContent 向剧本的某个场景中添加内容块
+// POST /v1/scripts/:scriptID/scenes/:sceneID/contents
+func (h *ScriptHandler) AddContent(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+	sceneID := c.Param("sceneID")
+
+	var content model.SceneContent
+	if err := c.ShouldBindJSON(&content); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	created, err := h.svc.AddContent(scriptID, sceneID, content)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, created)
+}
+
+// DeleteContent 删除剧本中的某个内容块
+// DELETE /v1/scripts/:scriptID/contents/:contentID
+func (h *ScriptHandler) DeleteContent(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+	contentID := c.Param("contentID")
+
+	if err := h.svc.DeleteContent(scriptID, contentID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}

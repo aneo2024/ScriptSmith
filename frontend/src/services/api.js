@@ -33,8 +33,8 @@ api.interceptors.response.use(
 export default api;
 
 /** 提交小说文本，返回 { task_id, status, progress } */
-export const convertNovel = (novelText, format, style) =>
-  api.post('/convert', { novel_text: novelText, format, style }).then((r) => r.data);
+export const convertNovel = (novelText, format, style, workId) =>
+  api.post('/convert', { novel_text: novelText, format, style, work_id: workId }).then((r) => r.data);
 
 /** 查询任务状态，返回 { id, status, progress, format, style, created_at, updated_at, error_msg } */
 export const getTaskStatus = (taskId) =>

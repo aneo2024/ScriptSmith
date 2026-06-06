@@ -48,19 +48,19 @@ func (h *WorkHandler) CreateWork(c *gin.Context) {
 
 	userID := c.GetString("userID")
 	work := &model.Work{
-		ID:        uuid.New().String(),
-		UserID:    userID,
-		Title:     req.Title,
-		Summary:   req.Summary,
-		Status:    "draft",
-		Genre:     req.Genre,
-		MainChar:  req.MainChar,
-		WordCount: req.WordCount,
+		ID:              uuid.New().String(),
+		UserID:          userID,
+		Title:           req.Title,
+		Summary:         req.Summary,
+		Status:          "draft",
+		Genre:           req.Genre,
+		MainChar:        req.MainChar,
+		WordCount:       req.WordCount,
 	}
 
 	if len(req.SupportingChars) > 0 {
-		charsJSON, _ := json.Marshal(req.SupportingChars)
-		work.SupportingChars = charsJSON
+		data, _ := json.Marshal(req.SupportingChars)
+		work.SupportingChars = data
 	}
 
 	if err := h.workRepo.Create(work); err != nil {
@@ -143,8 +143,8 @@ func (h *WorkHandler) UpdateWork(c *gin.Context) {
 		work.MainChar = req.MainChar
 	}
 	if len(req.SupportingChars) > 0 {
-		charsJSON2, _ := json.Marshal(req.SupportingChars)
-		work.SupportingChars = charsJSON2
+		data, _ := json.Marshal(req.SupportingChars)
+		work.SupportingChars = data
 	}
 	if req.WordCount > 0 {
 		work.WordCount = req.WordCount
@@ -194,6 +194,19 @@ func (h *WorkHandler) GetWorkCount(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"count": count})
+}
+
+// GetStats 获取用户作品统计（作品数 + 总字数）
+// GET /v1/works/stats
+func (h *WorkHandler) GetStats(c *gin.Context) {
+	userID := c.GetString("userID")
+	count, totalWords, err := h.workRepo.StatsByUserID(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"count": count, "total_words": totalWords})
 }
 
 // RegisterRoutes 注册路由
