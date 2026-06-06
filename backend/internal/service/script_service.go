@@ -16,19 +16,22 @@ import (
 type ScriptService struct {
 	taskRepo   *repository.TaskRepository
 	scriptRepo *repository.ScriptRepository
+	workRepo   *repository.WorkRepository
 	aiClient   *ai.Client
 }
 
 func NewScriptService(
 	taskRepo *repository.TaskRepository,
 	scriptRepo *repository.ScriptRepository,
+	workRepo *repository.WorkRepository,
 	aiClient *ai.Client,
 ) *ScriptService {
-	return &ScriptService{taskRepo: taskRepo, scriptRepo: scriptRepo, aiClient: aiClient}
+	return &ScriptService{taskRepo: taskRepo, scriptRepo: scriptRepo, workRepo: workRepo, aiClient: aiClient}
 }
 
 // ConvertNovel 创建任务（pending）并立即返回 task_id；启动 goroutine 后台调 AI。
-func (s *ScriptService) ConvertNovel(novelText, format, style, userID string) (*model.Task, error) {
+// workID 可选，传入后脚本生成完成会自动关联到该作品。
+func (s *ScriptService) ConvertNovel(novelText, format, style, userID, workID string) (*model.Task, error) {
 	if novelText == "" {
 		return nil, fmt.Errorf("novel_text 不能为空")
 	}
@@ -53,7 +56,7 @@ func (s *ScriptService) ConvertNovel(novelText, format, style, userID string) (*
 	}
 
 	// 异步 goroutine 调 AI，避免阻塞 HTTP 请求
-	go s.processInBackground(task.ID)
+	go s.processInBackground(task.ID, workID)
 
 	return task, nil
 }
@@ -134,7 +137,7 @@ func (s *ScriptService) ListTasksByUser(userID string) ([]*model.Task, error) {
 }
 
 // processInBackground 后台处理：processing → 调 AI 得结构化 JSON → 存 Script → completed/failed
-func (s *ScriptService) processInBackground(taskID string) {
+func (s *ScriptService) processInBackground(taskID, workID string) {
 	defer func() {
 		if r := recover(); r != nil {
 			_ = s.taskRepo.UpdateStatus(taskID, "failed", 0, "", fmt.Sprintf("后台处理异常: %v", r))
@@ -165,6 +168,12 @@ func (s *ScriptService) processInBackground(taskID string) {
 	// 填充 Script 表字段后存入数据库
 	script.ID = uuid.New().String()
 	script.TaskID = taskID
+	if workID != "" {
+		script.WorkID = &workID
+		// 计算当前作品已有多少集
+		existing, _ := s.scriptRepo.ListByWorkID(workID)
+		script.Episode = len(existing) + 1
+	}
 	script.Version = 1
 	script.YAML = "" // 后续再补充 YAML 生成逻辑
 	if err := s.scriptRepo.Create(script); err != nil {
@@ -178,6 +187,14 @@ func (s *ScriptService) processInBackground(taskID string) {
 		log.Printf("[task %s] 更新 completed 状态失败: %v", taskID, err)
 		return
 	}
+
+	// 如果关联了作品，累加字数
+	if workID != "" {
+		if err := s.workRepo.AddWordCount(workID, len(task.NovelText)); err != nil {
+			log.Printf("[task %s] 更新作品字数失败: %v", taskID, err)
+		}
+	}
+
 	log.Printf("[task %s] 转换完成，Script ID: %s", taskID, script.ID)
 }
 
@@ -215,6 +232,11 @@ func (s *ScriptService) GetScriptByTaskID(taskID string) (*model.Script, error) 
 		return nil, fmt.Errorf("剧本不存在: %w", err)
 	}
 	return script, nil
+}
+
+// ListScriptsByWorkID 获取作品下所有剧本（按集数排序）
+func (s *ScriptService) ListScriptsByWorkID(workID string) ([]model.Script, error) {
+	return s.scriptRepo.ListByWorkID(workID)
 }
 
 // UpdateScene 更新指定剧本中的某个场景
@@ -307,28 +329,28 @@ func (s *ScriptService) scriptToYAML(script *model.Script) (string, error) {
 	}
 
 	type contentLineYAML struct {
-		Type           string `yaml:"type,omitempty"`
-		Description    string `yaml:"description,omitempty"`
-		CharacterName  string `yaml:"character_name,omitempty"`
-		Text           string `yaml:"text,omitempty"`
-		Parenthetical  string `yaml:"parenthetical,omitempty"`
-		TransitionType string `yaml:"transition_type,omitempty"`
-		SoundType      string `yaml:"sound_type,omitempty"`
-		SoundDesc      string `yaml:"sound_description,omitempty"`
+		Type            string `yaml:"type,omitempty"`
+		Description     string `yaml:"description,omitempty"`
+		CharacterName   string `yaml:"character_name,omitempty"`
+		Text            string `yaml:"text,omitempty"`
+		Parenthetical   string `yaml:"parenthetical,omitempty"`
+		TransitionType  string `yaml:"transition_type,omitempty"`
+		SoundType       string `yaml:"sound_type,omitempty"`
+		SoundDesc       string `yaml:"sound_description,omitempty"`
 	}
 
 	type sceneYAML struct {
-		Sequence int               `yaml:"sequence"`
-		Title    string            `yaml:"title"`
-		Slugline sluglineYAML      `yaml:"slugline"`
+		Sequence int              `yaml:"sequence"`
+		Title    string           `yaml:"title"`
+		Slugline sluglineYAML     `yaml:"slugline"`
 		Content  []contentLineYAML `yaml:"content"`
 	}
 
 	doc := map[string]interface{}{
-		"title":          meta.Title,
+		"title":         meta.Title,
 		"original_title": meta.OriginalTitle,
-		"format":         meta.Format,
-		"genre":          meta.Genre,
+		"format":        meta.Format,
+		"genre":         meta.Genre,
 	}
 
 	if len(chars) > 0 {
@@ -391,6 +413,84 @@ func (s *ScriptService) UpdateContent(scriptID, contentID string, content model.
 		for j := range scenes[i].Content {
 			if scenes[i].Content[j].ID == contentID {
 				scenes[i].Content[j] = content
+				found = true
+				break
+			}
+		}
+		if found {
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("内容块 %s 不存在", contentID)
+	}
+
+	scenesJSON, err := json.Marshal(scenes)
+	if err != nil {
+		return fmt.Errorf("序列化场景失败: %w", err)
+	}
+
+	script.Scenes = scenesJSON
+	return s.scriptRepo.Update(script)
+}
+
+// AddContent 向指定场景中添加内容块
+func (s *ScriptService) AddContent(scriptID, sceneID string, content model.SceneContent) (*model.SceneContent, error) {
+	script, err := s.scriptRepo.Get(scriptID)
+	if err != nil {
+		return nil, fmt.Errorf("剧本不存在: %w", err)
+	}
+
+	var scenes []model.Scene
+	if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
+		return nil, fmt.Errorf("解析场景数据失败: %w", err)
+	}
+
+	found := false
+	for i := range scenes {
+		if scenes[i].ID == sceneID {
+			if content.ID == "" {
+				content.ID = uuid.New().String()
+			}
+			scenes[i].Content = append(scenes[i].Content, content)
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("场景 %s 不存在", sceneID)
+	}
+
+	scenesJSON, err := json.Marshal(scenes)
+	if err != nil {
+		return nil, fmt.Errorf("序列化场景失败: %w", err)
+	}
+
+	script.Scenes = scenesJSON
+	if err := s.scriptRepo.Update(script); err != nil {
+		return nil, fmt.Errorf("保存剧本失败: %w", err)
+	}
+
+	return &content, nil
+}
+
+// DeleteContent 删除指定内容块
+func (s *ScriptService) DeleteContent(scriptID, contentID string) error {
+	script, err := s.scriptRepo.Get(scriptID)
+	if err != nil {
+		return fmt.Errorf("剧本不存在: %w", err)
+	}
+
+	var scenes []model.Scene
+	if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
+		return fmt.Errorf("解析场景数据失败: %w", err)
+	}
+
+	found := false
+	for i := range scenes {
+		for j := range scenes[i].Content {
+			if scenes[i].Content[j].ID == contentID {
+				scenes[i].Content = append(scenes[i].Content[:j], scenes[i].Content[j+1:]...)
 				found = true
 				break
 			}

@@ -10,6 +10,8 @@ import (
 type Script struct {
 	ID         string         `gorm:"primaryKey" json:"id"`
 	TaskID     string         `gorm:"index" json:"task_id"`
+	WorkID     *string        `gorm:"index" json:"work_id"`          // 关联的作品 ID，一对多
+	Episode    int            `json:"episode"`                       // 第几集/回
 	Metadata   datatypes.JSON `gorm:"type:json" json:"metadata"`     // {title, original_title, format, genre}
 	Characters datatypes.JSON `gorm:"type:json" json:"characters"`   // [{id, name, type, description}]
 	Scenes     datatypes.JSON `gorm:"type:json" json:"scenes"`       // [{id, sequence, slugline, content}]

@@ -36,6 +36,15 @@ func (r *ScriptRepository) GetByTaskID(taskID string) (*model.Script, error) {
 	return &script, nil
 }
 
+func (r *ScriptRepository) ListByWorkID(workID string) ([]model.Script, error) {
+	var scripts []model.Script
+	err := r.db.Where("work_id = ?", workID).Order("episode ASC").Find(&scripts).Error
+	if err != nil {
+		return nil, err
+	}
+	return scripts, nil
+}
+
 func (r *ScriptRepository) Update(script *model.Script) error {
 	return r.db.Save(script).Error
 }
