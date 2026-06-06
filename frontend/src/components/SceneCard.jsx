@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import useScriptStore from '../store/scriptStore';
 import { updateContent, updateScene as updateSceneAPI } from '../services/api';
 import '../styles/scene-card.css';
@@ -7,9 +7,22 @@ import '../styles/scene-card.css';
 function ContentEdit({ item, onSave, onCancel }) {
   const [text, setText] = useState(item.text || item.description || '');
   const [characterName, setCharacterName] = useState(item.character_name || '');
+  const containerRef = useRef(null);
+
+  // 打开编辑时自动聚焦到台词/内容区域（非角色名）
+  useEffect(() => {
+    const el = containerRef.current?.querySelector('.dialogue-edit, .edit-input');
+    if (el) {
+      el.focus();
+      // 把光标放到末尾
+      const len = el.value.length;
+      el.setSelectionRange?.(len, len);
+    }
+  }, []);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Escape') onCancel();
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSave();
   };
 
   const handleSave = () => {
@@ -31,41 +44,44 @@ function ContentEdit({ item, onSave, onCancel }) {
 
   if (item.type === 'dialogue') {
     return (
-      <div className="content-block dialogue editing">
+      <div className="content-block dialogue editing" ref={containerRef}>
         <input
           className="edit-input name-input"
           value={characterName}
           onChange={(e) => setCharacterName(e.target.value)}
-          onBlur={handleSave}
           onKeyDown={handleKeyDown}
           placeholder="角色名"
-          autoFocus
         />
         <textarea
           className="edit-input dialogue-edit"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onBlur={handleSave}
           onKeyDown={handleKeyDown}
           placeholder="台词"
           rows={3}
         />
+        <div className="edit-actions">
+          <button className="edit-btn save" onClick={handleSave}>保存</button>
+          <button className="edit-btn cancel" onClick={onCancel}>取消</button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="content-block editing">
+    <div className="content-block editing" ref={containerRef}>
       <textarea
         className="edit-input"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onBlur={handleSave}
         onKeyDown={handleKeyDown}
         placeholder={item.type === 'action' ? '动作描述' : '内容'}
         rows={Math.max(2, text.split('\n').length)}
-        autoFocus
       />
+      <div className="edit-actions">
+        <button className="edit-btn save" onClick={handleSave}>保存</button>
+        <button className="edit-btn cancel" onClick={onCancel}>取消</button>
+      </div>
     </div>
   );
 }
