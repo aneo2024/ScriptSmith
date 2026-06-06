@@ -133,16 +133,6 @@ func (s *ScriptService) ListTasksByUser(userID string) ([]*model.Task, error) {
 	return s.taskRepo.ListByUser(userID)
 }
 
-// ListAllTasks 获取所有任务（管理后台用）
-func (s *ScriptService) ListAllTasks() ([]*model.Task, error) {
-	return s.taskRepo.ListAll()
-}
-
-// ListTasksByUser 获取用户的任务列表
-func (s *ScriptService) ListTasksByUser(userID string) ([]*model.Task, error) {
-	return s.taskRepo.ListByUser(userID)
-}
-
 // processInBackground 后台处理：processing → 调 AI → 解析 YAML 存 Script → completed/failed
 func (s *ScriptService) processInBackground(ctx context.Context, taskID string) {
 	defer func() {

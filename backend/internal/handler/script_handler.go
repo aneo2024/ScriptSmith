@@ -32,8 +32,7 @@ func (h *ScriptHandler) Convert(c *gin.Context) {
 	}
 	userID := c.GetString("userID")
 	task, err := h.svc.ConvertNovel(req.NovelText, req.Format, req.Style, userID)
-	userID := c.GetString("userID")
-	task, err := h.svc.ConvertNovel(req.NovelText, req.Format, req.Style, userID)
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -49,9 +48,6 @@ func (h *ScriptHandler) Convert(c *gin.Context) {
 // GET /v1/task/:id
 func (h *ScriptHandler) GetTask(c *gin.Context) {
 	id := c.Param("id")
-	userID := c.GetString("userID")
-	role := c.GetString("role")
-	task, err := h.svc.GetTask(id, userID, role)
 	userID := c.GetString("userID")
 	role := c.GetString("role")
 	task, err := h.svc.GetTask(id, userID, role)
@@ -78,9 +74,7 @@ func (h *ScriptHandler) GetScript(c *gin.Context) {
 	userID := c.GetString("userID")
 	role := c.GetString("role")
 	yaml, err := h.svc.GetScript(id, userID, role)
-	userID := c.GetString("userID")
-	role := c.GetString("role")
-	yaml, err := h.svc.GetScript(id, userID, role)
+
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -96,9 +90,7 @@ func (h *ScriptHandler) GetCharacters(c *gin.Context) {
 	userID := c.GetString("userID")
 	role := c.GetString("role")
 	characters, err := h.svc.GetCharacters(id, userID, role)
-	userID := c.GetString("userID")
-	role := c.GetString("role")
-	characters, err := h.svc.GetCharacters(id, userID, role)
+
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -113,9 +105,7 @@ func (h *ScriptHandler) GetScenes(c *gin.Context) {
 	userID := c.GetString("userID")
 	role := c.GetString("role")
 	scenes, err := h.svc.GetScenes(id, userID, role)
-	userID := c.GetString("userID")
-	role := c.GetString("role")
-	scenes, err := h.svc.GetScenes(id, userID, role)
+
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
