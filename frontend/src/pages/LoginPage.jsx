@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Input, Button, Typography, message } from 'antd';
 import { useAuth } from '../hooks/useAuth';
 import { register as registerApi } from '../services/auth';
+import BubbleBackground from '../components/BubbleBackground';
 
 const { Title } = Typography;
 
@@ -60,8 +61,12 @@ export default function LoginPage() {
         justifyContent: 'center',
         alignItems: 'center',
         background: '#f0f0f0',
+        position: 'relative',
+        overflow: 'hidden',
       }}
     >
+      <BubbleBackground />
+
       <div
         style={{
           width: 400,
@@ -69,6 +74,8 @@ export default function LoginPage() {
           borderRadius: 16,
           background: '#fff',
           boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+          position: 'relative',
+          zIndex: 1,
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
