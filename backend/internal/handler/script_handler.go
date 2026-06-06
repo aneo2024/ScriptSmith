@@ -32,7 +32,6 @@ func (h *ScriptHandler) Convert(c *gin.Context) {
 	}
 	userID := c.GetString("userID")
 	task, err := h.svc.ConvertNovel(req.NovelText, req.Format, req.Style, userID)
-
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -67,15 +66,25 @@ func (h *ScriptHandler) GetTask(c *gin.Context) {
 	})
 }
 
-// GetScript 获取转换完成的 YAML 剧本
+// GetScript 获取转换完成的 YAML 剧本（优先从 Script 表生成）
 // GET /v1/script/:id
 func (h *ScriptHandler) GetScript(c *gin.Context) {
 	id := c.Param("id")
 	userID := c.GetString("userID")
 	role := c.GetString("role")
 	yaml, err := h.svc.GetScript(id, userID, role)
-
 	if err != nil {
+		// 旧的 Task.ResultYAML 为空时，尝试从 Script 表按 taskID 生成
+		if err.Error() == "剧本内容为空" {
+			yamlFromScript, err2 := h.svc.ExportYAMLByTaskID(id)
+			if err2 != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err2.Error()})
+				return
+			}
+			c.Header("Content-Type", "text/yaml; charset=utf-8")
+			c.String(http.StatusOK, yamlFromScript)
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -90,7 +99,6 @@ func (h *ScriptHandler) GetCharacters(c *gin.Context) {
 	userID := c.GetString("userID")
 	role := c.GetString("role")
 	characters, err := h.svc.GetCharacters(id, userID, role)
-
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -105,7 +113,6 @@ func (h *ScriptHandler) GetScenes(c *gin.Context) {
 	userID := c.GetString("userID")
 	role := c.GetString("role")
 	scenes, err := h.svc.GetScenes(id, userID, role)
-
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -191,6 +198,38 @@ func (h *ScriptHandler) UpdateContent(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
+// ExportYAML 导出剧本为 YAML 格式
+// GET /v1/scripts/:scriptID/yaml
+func (h *ScriptHandler) ExportYAML(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+	yamlStr, err := h.svc.ExportYAML(scriptID, "", "")
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.Header("Content-Type", "text/yaml; charset=utf-8")
+	c.Header("Content-Disposition", "attachment; filename=script.yaml")
+	c.String(http.StatusOK, yamlStr)
+}
+
+// SaveScript 全量保存剧本
+// PUT /v1/scripts/:scriptID
+func (h *ScriptHandler) SaveScript(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+
+	var script model.Script
+	if err := c.ShouldBindJSON(&script); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.svc.SaveScript(scriptID, &script); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
 // RegisterRoutes 注册路由
 func (h *ScriptHandler) RegisterRoutes(r *gin.Engine) {
 	v1 := r.Group("/v1")
@@ -201,5 +240,12 @@ func (h *ScriptHandler) RegisterRoutes(r *gin.Engine) {
 		v1.GET("/script/:id", h.GetScript)
 		v1.GET("/script/:id/characters", h.GetCharacters)
 		v1.GET("/script/:id/scenes", h.GetScenes)
+		// 结构化剧本路由
+		v1.GET("/scripts/by-task/:taskID", h.GetScriptByTaskID)
+		v1.GET("/scripts/:scriptID", h.GetStructuredScript)
+		v1.GET("/scripts/:scriptID/yaml", h.ExportYAML)
+		v1.PUT("/scripts/:scriptID", h.SaveScript)
+		v1.PUT("/scripts/:scriptID/scenes/:sceneID", h.UpdateScene)
+		v1.PUT("/scripts/:scriptID/contents/:contentID", h.UpdateContent)
 	}
 }

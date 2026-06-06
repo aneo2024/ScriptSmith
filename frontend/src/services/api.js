@@ -51,3 +51,15 @@ export const getStructuredScript = (scriptId) =>
 /** 按 taskId 获取关联的结构化剧本 */
 export const getScriptByTaskId = (taskId) =>
   api.get(`/scripts/by-task/${taskId}`).then((r) => r.data);
+
+/** 导出剧本 YAML（返回文本，触发下载） */
+export const exportScriptYAML = (scriptId) =>
+  api.get(`/scripts/${scriptId}/yaml`, { responseType: 'blob' }).then((r) => r.data);
+
+/** 更新指定内容块 */
+export const updateContent = (scriptId, contentId, data) =>
+  api.put(`/scripts/${scriptId}/contents/${contentId}`, data).then((r) => r.data);
+
+/** 更新指定场景 */
+export const updateScene = (scriptId, sceneId, data) =>
+  api.put(`/scripts/${scriptId}/scenes/${sceneId}`, data).then((r) => r.data);
