@@ -26,3 +26,12 @@ export const listWorkScripts = (workId) =>
 
 export const generateScriptSummary = (scriptId) =>
   api.post(`/scripts/${scriptId}/summary`, {}, { timeout: 60000 }).then((r) => r.data);
+
+export const generateCharacterAppearances = (scriptId) =>
+  api.post(`/scripts/${scriptId}/characters/appearance`, {}, { timeout: 60000 }).then((r) => r.data);
+
+export const generateSceneEnvironments = (scriptId) =>
+  api.post(`/scripts/${scriptId}/scenes/environment`, {}, { timeout: 60000 }).then((r) => r.data);
+
+export const generateCharacterProfiles = (workId) =>
+  api.post(`/works/${workId}/characters/profiles`, {}, { timeout: 60000 }).then((r) => r.data);

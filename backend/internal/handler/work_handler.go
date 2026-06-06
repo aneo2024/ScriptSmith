@@ -3,25 +3,37 @@ package handler
 import (
 	"encoding/json"
 	"log"
+	"scriptsmith/internal/ai"
 	"scriptsmith/internal/model"
 	"scriptsmith/internal/repository"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type WorkHandler struct {
-	workRepo   *repository.WorkRepository
-	scriptRepo *repository.ScriptRepository
-	taskRepo   *repository.TaskRepository
+	workRepo     *repository.WorkRepository
+	scriptRepo   *repository.ScriptRepository
+	taskRepo     *repository.TaskRepository
+	providerRepo *repository.AIProviderRepository
+	aiClient     *ai.Client
 }
 
 func NewWorkHandler(
 	workRepo *repository.WorkRepository,
 	scriptRepo *repository.ScriptRepository,
 	taskRepo *repository.TaskRepository,
+	providerRepo *repository.AIProviderRepository,
+	aiClient *ai.Client,
 ) *WorkHandler {
-	return &WorkHandler{workRepo: workRepo, scriptRepo: scriptRepo, taskRepo: taskRepo}
+	return &WorkHandler{
+		workRepo:     workRepo,
+		scriptRepo:   scriptRepo,
+		taskRepo:     taskRepo,
+		providerRepo: providerRepo,
+		aiClient:     aiClient,
+	}
 }
 
 type CreateWorkRequest struct {
@@ -256,4 +268,143 @@ func (h *WorkHandler) GetStats(c *gin.Context) {
 	}
 
 	OK(c, gin.H{"count": count, "total_words": totalWords})
+}
+
+// GenerateCharacterProfiles AI 根据作品下所有剧本的角色，生成人物小传（长相、年龄、性格、背景）
+// POST /v1/works/:id/characters/profiles
+func (h *WorkHandler) GenerateCharacterProfiles(c *gin.Context) {
+	workID := c.Param("id")
+	userID := c.GetString("userID")
+
+	work, err := h.workRepo.Get(workID)
+	if err != nil {
+		ErrorNotFound(c, "作品不存在")
+		return
+	}
+
+	// 收集该作品下所有剧本的所有角色
+	scripts, err := h.scriptRepo.ListByWorkID(workID)
+	if err != nil {
+		ErrorInternal(c, "读取剧本失败: "+err.Error())
+		return
+	}
+
+	type charBrief struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+		Type string `json:"type"`
+		Desc string `json:"desc"`
+		Arc  string `json:"arc"`
+	}
+	charMap := make(map[string]charBrief) // 按 name 去重
+	for _, s := range scripts {
+		var chars []model.Character
+		if err := json.Unmarshal(s.Characters, &chars); err != nil {
+			continue
+		}
+		for _, ch := range chars {
+			if ch.Name == "" {
+				continue
+			}
+			if _, exists := charMap[ch.Name]; !exists {
+				charMap[ch.Name] = charBrief{ID: ch.ID, Name: ch.Name, Type: ch.Type, Desc: ch.Description, Arc: ch.Arc}
+			}
+		}
+	}
+	if len(charMap) == 0 {
+		ErrorBadRequest(c, "该作品下暂无角色数据，请先转换剧本")
+		return
+	}
+
+	charList := make([]charBrief, 0, len(charMap))
+	for _, v := range charMap {
+		charList = append(charList, v)
+	}
+	charsJSON, _ := json.Marshal(charList)
+
+	// 解析 provider
+	var body struct {
+		ProviderID string `json:"provider_id"`
+	}
+	_ = c.ShouldBindJSON(&body)
+
+	// 简化版 resolveProvider
+	cfg := ai.ProviderConfig{Name: "system-default"}
+	if body.ProviderID != "" && h.providerRepo != nil {
+		if p, err := h.providerRepo.GetByID(body.ProviderID, userID); err == nil {
+			cfg = ai.ProviderConfig{APIKey: p.APIKey, BaseURL: p.BaseURL, Model: p.Model, MaxTokens: p.MaxTokens, Name: p.Name}
+		}
+	}
+	if cfg.APIKey == "" && h.providerRepo != nil {
+		if p, err := h.providerRepo.GetDefault(userID); err == nil {
+			cfg = ai.ProviderConfig{APIKey: p.APIKey, BaseURL: p.BaseURL, Model: p.Model, MaxTokens: p.MaxTokens, Name: p.Name}
+		}
+	}
+
+	// 构建剧情摘要
+	synopsis := work.Synopsis
+	if synopsis == "" {
+		synopsis = work.Summary
+	}
+	if synopsis == "" {
+		var sb strings.Builder
+		for _, s := range scripts {
+			if s.Summary != "" {
+				sb.WriteString(s.Summary)
+				sb.WriteString(" ")
+			}
+			if sb.Len() > 300 {
+				break
+			}
+		}
+		synopsis = sb.String()
+		if synopsis == "" {
+			synopsis = work.Title
+		}
+	}
+
+	log.Printf("[work=%s] 开始 AI 生成角色设定 (%d 个角色, provider=%s)", workID, len(charList), cfg.Name)
+	var results []map[string]string
+	if cfg.APIKey != "" && cfg.Name != "system-default" {
+		results, err = h.aiClient.GenerateWorkCharacterProfilesWithConfig(cfg, string(charsJSON), synopsis)
+	} else {
+		results, err = h.aiClient.GenerateWorkCharacterProfiles(string(charsJSON), synopsis)
+	}
+	if err != nil {
+		log.Printf("[work=%s] AI 生成角色设定失败: %v", workID, err)
+		ErrorInternal(c, "AI 生成角色设定失败: "+err.Error())
+		return
+	}
+
+	// 合并结果到 CharacterProfile 数组
+	profiles := make([]model.CharacterProfile, 0, len(results))
+	idMap := make(map[string]string) // char ID -> name
+	for _, v := range charList {
+		idMap[v.ID] = v.Name
+	}
+	for _, r := range results {
+		profile := model.CharacterProfile{
+			Name:        r["name"],
+			Age:         r["age"],
+			Gender:      r["gender"],
+			Appearance:  r["appearance"],
+			Personality: r["personality"],
+			Background:  r["background"],
+			AvatarURL:   r["avatar_url"],
+		}
+		if profile.Name == "" {
+			continue
+		}
+		profiles = append(profiles, profile)
+	}
+
+	profilesJSON, _ := json.Marshal(profiles)
+	work.CharacterProfiles = profilesJSON
+	if err := h.workRepo.Update(work); err != nil {
+		ErrorInternal(c, "保存角色设定失败: "+err.Error())
+		return
+	}
+
+	log.Printf("[work=%s] 角色设定已生成，共 %d 个角色", workID, len(profiles))
+	OK(c, gin.H{"profiles": profiles})
 }
