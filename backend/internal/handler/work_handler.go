@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"scriptsmith/internal/model"
 	"scriptsmith/internal/repository"
@@ -11,11 +12,17 @@ import (
 )
 
 type WorkHandler struct {
-	workRepo *repository.WorkRepository
+	workRepo   *repository.WorkRepository
+	scriptRepo *repository.ScriptRepository
+	taskRepo   *repository.TaskRepository
 }
 
-func NewWorkHandler(workRepo *repository.WorkRepository) *WorkHandler {
-	return &WorkHandler{workRepo: workRepo}
+func NewWorkHandler(
+	workRepo *repository.WorkRepository,
+	scriptRepo *repository.ScriptRepository,
+	taskRepo *repository.TaskRepository,
+) *WorkHandler {
+	return &WorkHandler{workRepo: workRepo, scriptRepo: scriptRepo, taskRepo: taskRepo}
 }
 
 type CreateWorkRequest struct {
@@ -48,14 +55,14 @@ func (h *WorkHandler) CreateWork(c *gin.Context) {
 
 	userID := c.GetString("userID")
 	work := &model.Work{
-		ID:              uuid.New().String(),
-		UserID:          userID,
-		Title:           req.Title,
-		Summary:         req.Summary,
-		Status:          "draft",
-		Genre:           req.Genre,
-		MainChar:        req.MainChar,
-		WordCount:       req.WordCount,
+		ID:        uuid.New().String(),
+		UserID:    userID,
+		Title:     req.Title,
+		Summary:   req.Summary,
+		Status:    "draft",
+		Genre:     req.Genre,
+		MainChar:  req.MainChar,
+		WordCount: req.WordCount,
 	}
 
 	if len(req.SupportingChars) > 0 {
@@ -158,7 +165,7 @@ func (h *WorkHandler) UpdateWork(c *gin.Context) {
 	c.JSON(http.StatusOK, work)
 }
 
-// DeleteWork 删除作品
+// DeleteWork 删除作品（级联删除关联的剧本和任务）
 // DELETE /v1/works/:id
 func (h *WorkHandler) DeleteWork(c *gin.Context) {
 	id := c.Param("id")
@@ -175,12 +182,32 @@ func (h *WorkHandler) DeleteWork(c *gin.Context) {
 		return
 	}
 
+	// 1. 找出该作品下的所有剧本
+	scripts, err := h.scriptRepo.ListByWorkID(id)
+	if err != nil {
+		log.Printf("查询关联剧本失败: %v", err)
+	}
+
+	// 2. 删除每个剧本及其关联的任务
+	for _, s := range scripts {
+		if s.TaskID != "" {
+			if err := h.taskRepo.Delete(s.TaskID); err != nil {
+				log.Printf("删除任务 %s 失败: %v", s.TaskID, err)
+			}
+		}
+		if err := h.scriptRepo.Delete(s.ID); err != nil {
+			log.Printf("删除剧本 %s 失败: %v", s.ID, err)
+		}
+	}
+
+	// 3. 删除作品
 	if err := h.workRepo.Delete(id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	log.Printf("作品 %s 及其 %d 个关联剧本已删除", id, len(scripts))
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "deleted_scripts": len(scripts)})
 }
 
 // GetWorkCount 获取用户作品数量

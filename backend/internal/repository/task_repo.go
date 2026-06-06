@@ -57,3 +57,7 @@ func (r *TaskRepository) UpdateStatus(id string, status string, progress float64
 	}
 	return r.db.Model(&model.Task{}).Where("id = ?", id).Updates(updates).Error
 }
+
+func (r *TaskRepository) Delete(id string) error {
+	return r.db.Delete(&model.Task{}, "id = ?", id).Error
+}
