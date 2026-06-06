@@ -14,19 +14,71 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// 响应拦截器：401 时自动跳转登录页
+// 防止多个 401 同时触发重复刷新
+let isRefreshing = false;
+let refreshPromise = null;
+
+function clearAuthAndRedirect() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user');
+  if (window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+}
+
+// 响应拦截器：401 时自动静默刷新 token
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // 避免在登录页重复跳转
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status !== 401 || originalRequest._retry) {
+      // 不是 401 或已经重试过，直接失败
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
+
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
+      clearAuthAndRedirect();
+      return Promise.reject(error);
+    }
+
+    // 防止并发刷新
+    if (!isRefreshing) {
+      isRefreshing = true;
+      refreshPromise = axios
+        .post('/v1/auth/refresh', { refresh_token: refreshToken })
+        .then((res) => {
+          const data = res.data;
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('refresh_token', data.refresh_token);
+          if (data.user_id) {
+            localStorage.setItem('user', JSON.stringify({
+              user_id: data.user_id,
+              username: data.username,
+              role: data.role,
+            }));
+          }
+          isRefreshing = false;
+          return data.token;
+        })
+        .catch(() => {
+          isRefreshing = false;
+          clearAuthAndRedirect();
+          return null;
+        });
+    }
+
+    // 等待刷新完成，然后用新 token 重试原请求
+    const newToken = await refreshPromise;
+    if (!newToken) {
+      return Promise.reject(error);
+    }
+
+    originalRequest.headers.Authorization = `Bearer ${newToken}`;
+    originalRequest._retry = true;
+    return api(originalRequest);
   },
 );
 

@@ -26,22 +26,28 @@ func NewWorkHandler(
 }
 
 type CreateWorkRequest struct {
-	Title           string   `json:"title" binding:"required"`
-	Summary         string   `json:"summary"`
-	Genre           string   `json:"genre"`
-	MainChar        string   `json:"main_char"`
-	SupportingChars []string `json:"supporting_chars"`
-	WordCount       int      `json:"word_count"`
+	Title             string                   `json:"title" binding:"required"`
+	Synopsis          string                   `json:"synopsis"`
+	Summary           string                   `json:"summary"`
+	CoverImage        string                   `json:"cover_image"`
+	Genre             string                   `json:"genre"`
+	MainChar          string                   `json:"main_char"`
+	CharacterProfiles []model.CharacterProfile `json:"character_profiles"`
+	SupportingChars   []string                 `json:"supporting_chars"`
+	WordCount         int                      `json:"word_count"`
 }
 
 type UpdateWorkRequest struct {
-	Title           string   `json:"title"`
-	Summary         string   `json:"summary"`
-	Status          string   `json:"status"`
-	Genre           string   `json:"genre"`
-	MainChar        string   `json:"main_char"`
-	SupportingChars []string `json:"supporting_chars"`
-	WordCount       int      `json:"word_count"`
+	Title             string                   `json:"title"`
+	Synopsis          string                   `json:"synopsis"`
+	Summary           string                   `json:"summary"`
+	CoverImage        string                   `json:"cover_image"`
+	Status            string                   `json:"status"`
+	Genre             string                   `json:"genre"`
+	MainChar          string                   `json:"main_char"`
+	CharacterProfiles []model.CharacterProfile `json:"character_profiles"`
+	SupportingChars   []string                 `json:"supporting_chars"`
+	WordCount         int                      `json:"word_count"`
 }
 
 // CreateWork 创建作品
@@ -58,11 +64,18 @@ func (h *WorkHandler) CreateWork(c *gin.Context) {
 		ID:        uuid.New().String(),
 		UserID:    userID,
 		Title:     req.Title,
+		Synopsis:  req.Synopsis,
 		Summary:   req.Summary,
+		CoverImage: req.CoverImage,
 		Status:    "draft",
 		Genre:     req.Genre,
 		MainChar:  req.MainChar,
 		WordCount: req.WordCount,
+	}
+
+	if len(req.CharacterProfiles) > 0 {
+		data, _ := json.Marshal(req.CharacterProfiles)
+		work.CharacterProfiles = data
 	}
 
 	if len(req.SupportingChars) > 0 {
@@ -137,8 +150,14 @@ func (h *WorkHandler) UpdateWork(c *gin.Context) {
 	if req.Title != "" {
 		work.Title = req.Title
 	}
+	if req.Synopsis != "" {
+		work.Synopsis = req.Synopsis
+	}
 	if req.Summary != "" {
 		work.Summary = req.Summary
+	}
+	if req.CoverImage != "" {
+		work.CoverImage = req.CoverImage
 	}
 	if req.Status != "" {
 		work.Status = req.Status
@@ -148,6 +167,10 @@ func (h *WorkHandler) UpdateWork(c *gin.Context) {
 	}
 	if req.MainChar != "" {
 		work.MainChar = req.MainChar
+	}
+	if len(req.CharacterProfiles) > 0 {
+		data, _ := json.Marshal(req.CharacterProfiles)
+		work.CharacterProfiles = data
 	}
 	if len(req.SupportingChars) > 0 {
 		data, _ := json.Marshal(req.SupportingChars)

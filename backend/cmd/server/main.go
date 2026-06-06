@@ -13,10 +13,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
-
-	_ "modernc.org/sqlite"
 )
 
 func main() {
@@ -24,29 +23,48 @@ func main() {
 	_ = godotenv.Load(".env")
 	_ = godotenv.Load("../../.env")
 
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "scriptsmith.db"
+	dbType := os.Getenv("DB_TYPE")
+	if dbType == "" {
+		dbType = "sqlite" // 默认用 SQLite 开发
 	}
 
-	dsn := fmt.Sprintf("file:%s?cache=shared&_fk=1", dbPath)
-	db, err := gorm.Open(sqlite.Dialector{DSN: dsn, DriverName: "sqlite"}, &gorm.Config{})
+	var db *gorm.DB
+	var err error
+
+	switch dbType {
+	case "postgres":
+		dsn := os.Getenv("DB_DSN")
+		if dsn == "" {
+			dsn = "postgres://postgres:postgres@localhost:5432/scriptsmith?sslmode=disable"
+		}
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	default:
+		// SQLite
+		dbPath := os.Getenv("DB_PATH")
+		if dbPath == "" {
+			dbPath = "scriptsmith.db"
+		}
+		dsn := fmt.Sprintf("file:%s?cache=shared&_fk=1", dbPath)
+		db, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	}
+
 	if err != nil {
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
-	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}, &model.Work{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Script{}, &model.Work{}, &model.RefreshToken{}); err != nil {
 		log.Fatalf("迁移表结构失败: %v", err)
 	}
-	log.Printf("数据库已就绪: %s", dbPath)
+	log.Printf("数据库已就绪 (type=%s)", dbType)
 
 	aiClient := ai.NewClient()
 	taskRepo := repository.NewTaskRepository(db)
 	scriptRepo := repository.NewScriptRepository(db)
 	userRepo := repository.NewUserRepository(db)
 	workRepo := repository.NewWorkRepository(db)
+	refreshTokenRepo := repository.NewRefreshTokenRepository(db)
 	svc := service.NewScriptService(taskRepo, scriptRepo, workRepo, aiClient)
 	h := handler.NewScriptHandler(svc)
-	authH := handler.NewAuthHandler(userRepo)
+	authH := handler.NewAuthHandler(userRepo, refreshTokenRepo)
 	workH := handler.NewWorkHandler(workRepo, scriptRepo, taskRepo)
 
 	r := gin.Default()
@@ -68,12 +86,14 @@ func main() {
 		v1.GET("/health", h.HealthCheck)
 		v1.POST("/auth/register", authH.Register)
 		v1.POST("/auth/login", authH.Login)
+		v1.POST("/auth/refresh", authH.Refresh)
 		v1.GET("/auth/me", middleware.AuthMiddleware(), authH.Me)
 
 		// 需要认证的路由
 		auth := v1.Group("")
 		auth.Use(middleware.AuthMiddleware())
 		{
+			auth.POST("/auth/logout", authH.Logout)
 			auth.POST("/convert", h.Convert)
 			auth.GET("/task/:id", h.GetTask)
 			auth.GET("/script/:id", h.GetScript)
