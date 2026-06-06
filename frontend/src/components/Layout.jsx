@@ -1,5 +1,5 @@
 import { Layout, Typography, Space, Button } from 'antd';
-import { BookOutlined, PlusOutlined, LogoutOutlined, HomeOutlined, BulbOutlined } from '@ant-design/icons';
+import { BookOutlined, PlusOutlined, LogoutOutlined, HomeOutlined, BulbOutlined, SettingOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
@@ -98,6 +98,15 @@ export default function AppLayout({ children }) {
             style={navBtnStyle('/create-work')}
           >
             创作新作品
+          </Button>
+
+          <Button
+            icon={<SettingOutlined />}
+            size="middle"
+            onClick={() => navigate('/settings')}
+            style={navBtnStyle('/settings')}
+          >
+            设置
           </Button>
         </Space>
 

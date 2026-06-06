@@ -11,6 +11,7 @@ import WorkDetailPage from './pages/WorkDetailPage';
 import CreateWorkPage from './pages/CreateWorkPage';
 import InspirationPage from './pages/InspirationPage';
 import ArticleDetailPage from './pages/ArticleDetailPage';
+import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
 import { TaskProvider } from './hooks/useTask';
 import { AuthProvider } from './hooks/useAuth';
@@ -36,6 +37,7 @@ function AppRoutes() {
                 <Route path="/inspiration" element={<InspirationPage />} />
                 <Route path="/inspiration/article/:id" element={<ArticleDetailPage />} />
                 <Route path="/novel-input" element={<NovelInputPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
                 <Route path="*" element={<WorkListPage />} />
               </Routes>
             </AppLayout>

@@ -4,21 +4,34 @@ import { Card, Typography, Input, Select, Button, message, Upload } from 'antd';
 import { ThunderboltOutlined, ClearOutlined, UploadOutlined } from '@ant-design/icons';
 import TaskProgress from '../components/TaskProgress';
 import { useTask } from '../hooks/useTask';
+import { listProviders } from '../services/api';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 const MAX_CHARS = 50000;
 
 const formatOptions = [
-  { value: 'film', label: '电影' },
-  { value: 'tv_series', label: '电视剧' },
+  { value: 'film', label: '电影剧本' },
+  { value: 'tv_series', label: '电视剧本' },
   { value: 'stage_play', label: '舞台剧' },
+  { value: 'animation', label: '动画剧本' },
+  { value: 'short_film', label: '短片' },
+  { value: 'web_series', label: '网剧' },
+  { value: 'documentary', label: '纪录片脚本' },
 ];
 
 const styleOptions = [
   { value: 'faithful', label: '忠实原著' },
   { value: 'commercial', label: '商业化' },
   { value: 'experimental', label: '实验性' },
+  { value: 'noir', label: '黑色电影' },
+  { value: 'romantic', label: '浪漫抒情' },
+  { value: 'thriller', label: '悬疑惊悚' },
+  { value: 'wuxia', label: '武侠风' },
+  { value: 'xianxia', label: '仙侠玄幻' },
+  { value: 'comedy', label: '喜剧幽默' },
+  { value: 'tragedy', label: '悲剧深沉' },
+  { value: 'minimalist', label: '极简留白' },
 ];
 
 export default function NovelInputPage() {
@@ -35,6 +48,26 @@ export default function NovelInputPage() {
   const [format, setFormat] = useState('film');
   const [style, setStyle] = useState('faithful');
   const [uploading, setUploading] = useState(false);
+
+  // AI Provider 选择
+  const [providers, setProviders] = useState([]);
+  const [selectedProvider, setSelectedProvider] = useState('');
+
+  useEffect(() => {
+    listProviders()
+      .then((resp) => {
+        const list = resp?.providers || [];
+        setProviders(list);
+        // 默认选 is_default 的
+        const def = list.find((p) => p.is_default);
+        if (def) {
+          setSelectedProvider(def.id);
+        }
+      })
+      .catch(() => {
+        // 失败则保持空，使用系统默认
+      });
+  }, []);
 
   const charCount = novelText.length;
 
@@ -80,7 +113,7 @@ export default function NovelInputPage() {
       message.warning('当前有任务正在处理，请等待完成');
       return;
     }
-    await submit(novelText, format, style);
+    await submit(novelText, format, style, null, selectedProvider || undefined);
   };
 
   const handleClear = () => {
@@ -165,6 +198,24 @@ export default function NovelInputPage() {
             options={styleOptions}
             disabled={isPolling}
             style={{ minWidth: 120 }}
+          />
+        </div>
+        <div>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
+            使用大模型
+          </Text>
+          <Select
+            value={selectedProvider || 'system'}
+            onChange={(v) => setSelectedProvider(v === 'system' ? '' : v)}
+            options={[
+              { value: 'system', label: '系统默认' },
+              ...providers.map((p) => ({
+                value: p.id,
+                label: `${p.name} · ${p.model}${p.is_default ? '（默认）' : ''}`,
+              })),
+            ]}
+            disabled={isPolling}
+            style={{ minWidth: 220 }}
           />
         </div>
         <Button

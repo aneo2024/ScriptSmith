@@ -17,10 +17,11 @@ func NewScriptHandler(svc *service.ScriptService) *ScriptHandler {
 }
 
 type ConvertRequest struct {
-	NovelText string `json:"novel_text" binding:"required"`
-	Format    string `json:"format"`
-	Style     string `json:"style"`
-	WorkID    string `json:"work_id"`
+	NovelText  string `json:"novel_text" binding:"required"`
+	Format     string `json:"format"`
+	Style      string `json:"style"`
+	WorkID     string `json:"work_id"`
+	ProviderID string `json:"provider_id"` // 可选：选择用户配置的 AI provider
 }
 
 // Convert 提交小说，返回任务ID（立即返回，后台异步调 AI）
@@ -32,7 +33,7 @@ func (h *ScriptHandler) Convert(c *gin.Context) {
 		return
 	}
 	userID := c.GetString("userID")
-	task, err := h.svc.ConvertNovel(req.NovelText, req.Format, req.Style, userID, req.WorkID)
+	task, err := h.svc.ConvertNovel(req.NovelText, req.Format, req.Style, userID, req.WorkID, req.ProviderID)
 	if err != nil {
 		ErrorInternal(c, err.Error())
 		return
@@ -283,11 +284,59 @@ func (h *ScriptHandler) SaveScript(c *gin.Context) {
 // POST /v1/scripts/:scriptID/summary
 func (h *ScriptHandler) GenerateSummary(c *gin.Context) {
 	scriptID := c.Param("scriptID")
+	userID := c.GetString("userID")
 
-	summary, err := h.svc.GenerateSummary(scriptID)
+	// 支持从 body 或 query 传 provider_id
+	var body struct {
+		ProviderID string `json:"provider_id"`
+	}
+	_ = c.ShouldBindJSON(&body)
+	if body.ProviderID == "" {
+		body.ProviderID = c.Query("provider_id")
+	}
+
+	summary, err := h.svc.GenerateSummary(scriptID, userID, body.ProviderID)
 	if err != nil {
 		ErrorInternal(c, err.Error())
 		return
 	}
 	OK(c, gin.H{"summary": summary})
+}
+
+// GenerateCharacterAppearances AI 生成角色外貌描述
+// POST /v1/scripts/:scriptID/characters/appearance
+func (h *ScriptHandler) GenerateCharacterAppearances(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+	userID := c.GetString("userID")
+
+	var body struct {
+		ProviderID string `json:"provider_id"`
+	}
+	_ = c.ShouldBindJSON(&body)
+
+	characters, err := h.svc.GenerateCharacterAppearances(scriptID, userID, body.ProviderID)
+	if err != nil {
+		ErrorInternal(c, err.Error())
+		return
+	}
+	OK(c, gin.H{"characters": characters})
+}
+
+// GenerateSceneEnvironments AI 生成场景环境/氛围描述
+// POST /v1/scripts/:scriptID/scenes/environment
+func (h *ScriptHandler) GenerateSceneEnvironments(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+	userID := c.GetString("userID")
+
+	var body struct {
+		ProviderID string `json:"provider_id"`
+	}
+	_ = c.ShouldBindJSON(&body)
+
+	scenes, err := h.svc.GenerateSceneEnvironments(scriptID, userID, body.ProviderID)
+	if err != nil {
+		ErrorInternal(c, err.Error())
+		return
+	}
+	OK(c, gin.H{"scenes": scenes})
 }
