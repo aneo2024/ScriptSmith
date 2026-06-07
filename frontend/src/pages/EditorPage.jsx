@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Spin, Button, Typography, message, Select, Space } from 'antd';
-import { ArrowLeftOutlined, DownloadOutlined, SwapOutlined, FileTextOutlined } from '@ant-design/icons';
+import { Spin, Button, Typography, App, Select, Space } from 'antd';
+import { ArrowLeftOutlined, DownloadOutlined, SwapOutlined, FileTextOutlined, DeleteOutlined } from '@ant-design/icons';
 import SceneNav from '../components/SceneNav';
 import SceneCard from '../components/SceneCard';
 import useScriptStore from '../store/scriptStore';
 import { useTask } from '../hooks/useTask';
 import { getScriptByTaskId, exportScriptYAML } from '../services/api';
-import { listWorkScripts } from '../services/work';
+import { listWorkScripts, deleteScript } from '../services/work';
 import '../styles/script-editor.css';
 
 const { Title, Text } = Typography;
@@ -39,6 +39,7 @@ export default function EditorPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const scriptId = searchParams.get('scriptId');
+  const { modal, message } = App.useApp();
   const taskId = searchParams.get('taskId');
   const workId = searchParams.get('workId');
 
@@ -112,6 +113,27 @@ export default function EditorPage() {
     window.history.replaceState(null, '', `/editor?${params.toString()}`);
   };
 
+  const handleDeleteScript = () => {
+    const sid = script?.id;
+    if (!sid) return;
+    modal.confirm({
+      title: `确认删除第${script.episode || '?'}集「${script.metadata?.title || script.title || ''}」?`,
+      content: '删除后将移除该剧本及其关联任务，此操作不可恢复。',
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await deleteScript(sid);
+          message.success('已删除');
+          handleBack();
+        } catch (err) {
+          message.error('删除失败: ' + (err.response?.data?.error || err.message));
+        }
+      },
+    });
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
       {/* 顶部标题栏 */}
@@ -164,9 +186,18 @@ export default function EditorPage() {
             <Text type="warning">请通过 scriptId 或 taskId 参数打开剧本</Text>
           )}
           {script?.id && (
-            <Button icon={<DownloadOutlined />} onClick={handleExport}>
-              导出 YAML
-            </Button>
+            <>
+              <Button icon={<DownloadOutlined />} onClick={handleExport}>
+                导出 YAML
+              </Button>
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                onClick={handleDeleteScript}
+              >
+                删除此集
+              </Button>
+            </>
           )}
         </Space>
       </div>

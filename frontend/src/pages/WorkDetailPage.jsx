@@ -14,6 +14,7 @@ import {
   Spin,
   Badge,
   Divider,
+  Dropdown,
   message,
 } from 'antd';
 import {
@@ -33,11 +34,12 @@ import {
   SkinOutlined,
   HeatMapOutlined,
 } from '@ant-design/icons';
-import { parseScript, characterTypeLabel, characterTypeColor } from '../utils/parseScript';
+import { characterTypeLabel, characterTypeColor } from '../utils/parseScript';
+import { FORMATS, getFormatShortLabel, getFormatColor } from '../utils/scriptOptions';
 import {
   getWork,
   listWorkScripts,
-  deleteWork,
+  updateWork,
   generateScriptSummary,
   generateCharacterAppearances,
   generateSceneEnvironments,
@@ -300,6 +302,16 @@ export default function WorkDetailPage() {
     }
   };
 
+  const handleGenreChange = async ({ key }) => {
+    try {
+      await updateWork(id, { genre: key });
+      setWork((prev) => ({ ...prev, genre: key }));
+      message.success('作品格式已更新');
+    } catch (err) {
+      message.error('更新失败: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
   useEffect(() => {
     loadData();
   }, [id]);
@@ -351,9 +363,9 @@ export default function WorkDetailPage() {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => navigate('/create-work')}
+              onClick={() => navigate(`/create-work?workId=${id}`)}
             >
-              创作新作品
+              生成新剧集
             </Button>
           </Empty>
         </Card>
@@ -428,7 +440,7 @@ export default function WorkDetailPage() {
             ? JSON.parse(script.characters)
             : script.characters;
       }
-    } catch {}
+    } catch { /* JSON parse failed, use empty array */ }
 
     const summary = generateEpisodeSummary(scenes);
 
@@ -658,7 +670,7 @@ export default function WorkDetailPage() {
       return typeof work.character_profiles === 'string'
         ? JSON.parse(work.character_profiles)
         : work.character_profiles;
-    } catch { return []; }
+    } catch { /* parse failed */ return []; }
   })();
 
   return (
@@ -679,7 +691,26 @@ export default function WorkDetailPage() {
           {work?.title || '作品详情'}
         </Title>
         <Badge count={`${scripts.length} 集`} style={{ backgroundColor: '#1890ff' }} />
-        {work?.genre && <Tag>{work.genre === 'film' ? '电影' : work.genre === 'tv_series' ? '电视剧' : '舞台剧'}</Tag>}
+        {work?.genre && (
+          <Dropdown
+            menu={{
+              items: FORMATS.map((f) => ({
+                key: f.value,
+                label: f.label,
+              })),
+              selectedKeys: [work.genre],
+              onClick: handleGenreChange,
+            }}
+            trigger={['click']}
+          >
+            <Tag
+              color={getFormatColor(work.genre)}
+              style={{ cursor: 'pointer' }}
+            >
+              {getFormatShortLabel(work.genre)} <EditOutlined style={{ fontSize: 10 }} />
+            </Tag>
+          </Dropdown>
+        )}
       </div>
 
       {/* 作品信息卡：梗概 + 人物小传 */}
@@ -746,7 +777,7 @@ export default function WorkDetailPage() {
             ) : (
               !work?.synopsis && (
                 <Text type="secondary" style={{ fontSize: 13 }}>
-                  点击上方「生成角色设定」按钮，AI 将自动生成角色长相、年龄、性格和背景故事
+                  点击下方「生成角色设定」按钮，AI 将自动生成角色长相、年龄、性格和背景故事
                 </Text>
               )
             )}
