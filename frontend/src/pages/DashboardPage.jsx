@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Typography, Spin } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
@@ -57,19 +58,21 @@ const COLORS = {
 };
 
 /** 单个统计泡泡 */
-function StatBubble({ label, value, angle, distance, animName, delay }) {
+function StatBubble({ label, value, angle, distance, animName, delay, onClick }) {
   const rad = (angle * Math.PI) / 180;
   const left = 50 + Math.cos(rad) * distance;
   const top = 50 + Math.sin(rad) * distance;
 
   return (
     <div
+      onClick={onClick}
       style={{
         position: 'absolute',
         left: `${left}%`,
         top: `${top}%`,
         transform: 'translate(-50%, -50%)',
         animation: `${animName} 6s ease-in-out infinite, fadeInUp 0.8s ease-out ${delay}s both`,
+        cursor: onClick ? 'pointer' : 'default',
       }}
     >
       <div
@@ -100,6 +103,7 @@ function StatBubble({ label, value, angle, distance, animName, delay }) {
 }
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
 
@@ -158,6 +162,7 @@ export default function DashboardPage() {
               distance={38}
               animName="bubbleFloat1"
               delay={0.2}
+              onClick={() => navigate('/works')}
             />
             <StatBubble
               label="字数"
