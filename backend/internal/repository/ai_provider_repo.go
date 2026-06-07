@@ -60,12 +60,15 @@ func (r *AIProviderRepository) GetByID(id, userID string) (*model.AIProvider, er
 	return &p, nil
 }
 
-// GetDefault 获取用户的默认 provider；若没有，则取最新创建的一个
+// GetDefault 获取用户的默认 provider；若没有，则返回 nil（无错误）
 func (r *AIProviderRepository) GetDefault(userID string) (*model.AIProvider, error) {
 	var p model.AIProvider
 	if err := r.db.Where("user_id = ?", userID).
 		Order("is_default DESC, created_at DESC").
 		First(&p).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &p, nil

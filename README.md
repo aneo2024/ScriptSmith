@@ -2,6 +2,8 @@
 
 将小说文本通过 AI 转换为结构化剧本，支持多格式、多剧集管理、角色/场景编辑与 YAML 导出。
 
+**项目演示视频**: [B站链接](https://www.bilibili.com/video/BV1yuEh6GE3L/?vd_source=8ac9ee2de57af0dd1bba425929e7f095)
+
 ## 技术栈
 
 | 层级 | 技术 |
