@@ -48,12 +48,15 @@ func (r *TaskRepository) ListByUser(userID string) ([]*model.Task, error) {
 	return tasks, err
 }
 
-func (r *TaskRepository) UpdateStatus(id string, status string, progress float64, yaml string, errMsg string) error {
+func (r *TaskRepository) UpdateStatus(id string, status string, progress float64, yaml string, errMsg string, stage ...string) error {
 	updates := map[string]interface{}{
 		"status":      status,
 		"progress":    progress,
 		"result_yaml": yaml,
 		"error_msg":   errMsg,
+	}
+	if len(stage) > 0 && stage[0] != "" {
+		updates["current_stage"] = stage[0]
 	}
 	return r.db.Model(&model.Task{}).Where("id = ?", id).Updates(updates).Error
 }

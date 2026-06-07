@@ -121,6 +121,9 @@ export const convertNovel = (novelText, format, style, workId, providerId) =>
 export const getTaskStatus = (taskId) =>
   api.get(`/task/${taskId}`).then((r) => r.data);
 
+export const cancelTask = (taskId) =>
+  api.delete(`/task/${taskId}`).then((r) => r.data);
+
 export const getScript = (taskId) =>
   api.get(`/script/${taskId}`).then((r) => r.data);
 

@@ -7,10 +7,8 @@ import (
 	"scriptsmith/internal/ai"
 	"scriptsmith/internal/model"
 	"scriptsmith/internal/repository"
-	"strings"
 
 	"github.com/google/uuid"
-	"gopkg.in/yaml.v3"
 )
 
 type ScriptService struct {
@@ -38,7 +36,6 @@ func NewScriptService(
 }
 
 // ConvertNovel 创建任务（pending）并立即返回 task_id；启动 goroutine 后台调 AI。
-// providerID 可选：空时会尝试加载用户默认 provider，再没有则使用系统默认（env 变量）
 func (s *ScriptService) ConvertNovel(novelText, format, style, userID, workID, providerID string) (*model.Task, error) {
 	if novelText == "" {
 		return nil, fmt.Errorf("novel_text 不能为空")
@@ -47,17 +44,18 @@ func (s *ScriptService) ConvertNovel(novelText, format, style, userID, workID, p
 		format = "film"
 	}
 	if style == "" {
-		style = "realistic"
+		style = "faithful"
 	}
 
 	task := &model.Task{
-		ID:        uuid.New().String(),
-		UserID:    userID,
-		NovelText: novelText,
-		Format:    format,
-		Style:     style,
-		Status:    "pending",
-		Progress:  0,
+		ID:           uuid.New().String(),
+		UserID:       userID,
+		NovelText:    novelText,
+		Format:       format,
+		Style:        style,
+		Status:       "pending",
+		CurrentStage: "任务已创建，等待处理",
+		Progress:     0.05,
 	}
 	if err := s.taskRepo.Create(task); err != nil {
 		return nil, fmt.Errorf("创建任务失败: %w", err)
@@ -68,7 +66,7 @@ func (s *ScriptService) ConvertNovel(novelText, format, style, userID, workID, p
 	return task, nil
 }
 
-// GetTask 查询任务状态，admin 可查任意，普通用户只能查自己的
+// GetTask 查询任务状态
 func (s *ScriptService) GetTask(id, userID, role string) (*model.Task, error) {
 	var task *model.Task
 	var err error
@@ -103,7 +101,6 @@ func (s *ScriptService) GetScript(id, userID, role string) (string, error) {
 
 // GetCharacters 获取角色列表
 func (s *ScriptService) GetCharacters(taskID, userID, role string) (json.RawMessage, error) {
-	// 先校验任务归属
 	if _, err := s.GetTask(taskID, userID, role); err != nil {
 		return nil, err
 	}
@@ -119,7 +116,6 @@ func (s *ScriptService) GetCharacters(taskID, userID, role string) (json.RawMess
 
 // GetScenes 获取场景列表
 func (s *ScriptService) GetScenes(taskID, userID, role string) (json.RawMessage, error) {
-	// 先校验任务归属
 	if _, err := s.GetTask(taskID, userID, role); err != nil {
 		return nil, err
 	}
@@ -144,7 +140,6 @@ func (s *ScriptService) ListTasksByUser(userID string) ([]*model.Task, error) {
 }
 
 // resolveProvider 根据 providerID + userID 解析出 AI 调用配置
-// 优先级：显式 providerID > 用户默认 provider > 系统默认 provider
 func (s *ScriptService) resolveProvider(providerID, userID string) (ai.ProviderConfig, *model.AIProvider) {
 	if providerID != "" && s.providerRepo != nil {
 		if p, err := s.providerRepo.GetByID(providerID, userID); err == nil {
@@ -168,17 +163,14 @@ func (s *ScriptService) resolveProvider(providerID, userID string) (ai.ProviderC
 			}, p
 		}
 	}
-	// 回退到系统默认（由 env 变量初始化）
-	return ai.ProviderConfig{
-		Name: "system-default",
-	}, nil
+	return ai.ProviderConfig{Name: "system-default"}, nil
 }
 
-// processInBackground 后台处理：processing → 调 AI 得结构化 JSON → 存 Script → completed/failed
+// processInBackground 后台处理：分阶段调用 AI 生成剧本
 func (s *ScriptService) processInBackground(taskID, workID, providerID string) {
 	defer func() {
 		if r := recover(); r != nil {
-			_ = s.taskRepo.UpdateStatus(taskID, "failed", 0, "", fmt.Sprintf("后台处理异常: %v", r))
+			_ = s.taskRepo.UpdateStatus(taskID, "failed", 0, "", fmt.Sprintf("后台处理异常: %v", r), "任务异常，已中止")
 			log.Printf("[task %s] panic recovered: %v", taskID, r)
 		}
 	}()
@@ -189,15 +181,25 @@ func (s *ScriptService) processInBackground(taskID, workID, providerID string) {
 		return
 	}
 
-	if err := s.taskRepo.UpdateStatus(taskID, "processing", 0.2, "", ""); err != nil {
+	// 1. 初始化 provider 配置
+	if err := s.taskRepo.UpdateStatus(taskID, "processing", 0.15, "", "初始化大模型配置…", "解析 AI provider"); err != nil {
 		log.Printf("[task %s] 更新 processing 状态失败: %v", taskID, err)
 		return
 	}
 
-	// 解析 provider 配置
 	cfg, _ := s.resolveProvider(providerID, task.UserID)
 
-	// 调用 AI：如果 cfg.APIKey 非空则走自定义 provider，否则走系统默认
+	// 2. 调用大模型
+	providerName := "系统默认"
+	if cfg.APIKey != "" && cfg.Name != "system-default" {
+		providerName = cfg.Name
+	}
+	if err := s.taskRepo.UpdateStatus(taskID, "processing", 0.35, "",
+		fmt.Sprintf("正在通过「%s」生成剧本，请耐心等待…", providerName),
+		"调用大模型生成中"); err != nil {
+		log.Printf("[task %s] 更新 processing 状态失败: %v", taskID, err)
+	}
+
 	var script *model.Script
 	if cfg.APIKey != "" && cfg.Name != "system-default" {
 		log.Printf("[task %s] 使用自定义 provider: %s (%s)", taskID, cfg.Name, cfg.Model)
@@ -207,30 +209,39 @@ func (s *ScriptService) processInBackground(taskID, workID, providerID string) {
 		script, err = s.aiClient.ConvertNovelToStructured(task.NovelText, task.Format, task.Style)
 	}
 	if err != nil {
-		_ = s.taskRepo.UpdateStatus(taskID, "failed", 0, "", err.Error())
+		_ = s.taskRepo.UpdateStatus(taskID, "failed", 0, "", err.Error(), "AI 调用失败")
 		log.Printf("[task %s] AI 转换失败: %v", taskID, err)
 		return
 	}
 
-	// 填充 Script 表字段后存入数据库
+	// 3. 解析剧本结构
+	if err := s.taskRepo.UpdateStatus(taskID, "processing", 0.75, "", "整理角色与场景结构…", "解析剧本结构"); err != nil {
+		log.Printf("[task %s] 更新 processing 状态失败: %v", taskID, err)
+	}
+
+	// 4. 填充元信息后写库
 	script.ID = uuid.New().String()
 	script.TaskID = taskID
 	if workID != "" {
 		script.WorkID = &workID
-		// 计算当前作品已有多少集
 		existing, _ := s.scriptRepo.ListByWorkID(workID)
 		script.Episode = len(existing) + 1
 	}
 	script.Version = 1
-	script.YAML = "" // 后续再补充 YAML 生成逻辑
+	script.YAML = ""
+
+	if err := s.taskRepo.UpdateStatus(taskID, "processing", 0.90, "", "保存剧本到数据库…", "写入数据库"); err != nil {
+		log.Printf("[task %s] 更新 processing 状态失败: %v", taskID, err)
+	}
+
 	if err := s.scriptRepo.Create(script); err != nil {
-		_ = s.taskRepo.UpdateStatus(taskID, "failed", 0, "", fmt.Sprintf("保存剧本失败: %v", err))
+		_ = s.taskRepo.UpdateStatus(taskID, "failed", 0, "", fmt.Sprintf("保存剧本失败: %v", err), "数据库写入失败")
 		log.Printf("[task %s] 保存 Script 失败: %v", taskID, err)
 		return
 	}
 
-	// 更新 Task 为 completed（YAML 暂时留空）
-	if err := s.taskRepo.UpdateStatus(taskID, "completed", 1.0, "", ""); err != nil {
+	// 5. 完成
+	if err := s.taskRepo.UpdateStatus(taskID, "completed", 1.0, "", "", "剧本生成完成"); err != nil {
 		log.Printf("[task %s] 更新 completed 状态失败: %v", taskID, err)
 		return
 	}
@@ -243,6 +254,24 @@ func (s *ScriptService) processInBackground(taskID, workID, providerID string) {
 	}
 
 	log.Printf("[task %s] 转换完成，Script ID: %s", taskID, script.ID)
+}
+
+// CancelTask 取消任务
+func (s *ScriptService) CancelTask(taskID, userID, role string) error {
+	task, err := func() (*model.Task, error) {
+		if role == "admin" {
+			return s.taskRepo.GetByID(taskID)
+		}
+		return s.taskRepo.GetByIDAndUser(taskID, userID)
+	}()
+	if err != nil {
+		return fmt.Errorf("任务不存在")
+	}
+	if task.Status == "completed" || task.Status == "failed" {
+		return fmt.Errorf("任务已结束，无法取消")
+	}
+	return s.taskRepo.UpdateStatus(taskID, "failed", task.Progress, "",
+		"用户取消", "已被用户取消")
 }
 
 // CreateFromAI 调用 AI 生成结构化剧本并存入数据库
@@ -281,230 +310,12 @@ func (s *ScriptService) GetScriptByTaskID(taskID string) (*model.Script, error) 
 	return script, nil
 }
 
-// ListScriptsByWorkID 获取作品下所有剧本（按集数排序）
+// ListScriptsByWorkID 获取作品下所有剧本
 func (s *ScriptService) ListScriptsByWorkID(workID string) ([]model.Script, error) {
 	return s.scriptRepo.ListByWorkID(workID)
 }
 
-// UpdateScene 更新指定剧本中的某个场景
-func (s *ScriptService) UpdateScene(scriptID, sceneID string, scene model.Scene) error {
-	script, err := s.scriptRepo.Get(scriptID)
-	if err != nil {
-		return fmt.Errorf("剧本不存在: %w", err)
-	}
-
-	var scenes []model.Scene
-	if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
-		return fmt.Errorf("解析场景数据失败: %w", err)
-	}
-
-	found := false
-	for i := range scenes {
-		if scenes[i].ID == sceneID {
-			scenes[i] = scene
-			found = true
-			break
-		}
-	}
-	if !found {
-		return fmt.Errorf("场景 %s 不存在", sceneID)
-	}
-
-	scenesJSON, err := json.Marshal(scenes)
-	if err != nil {
-		return fmt.Errorf("序列化场景失败: %w", err)
-	}
-
-	script.Scenes = scenesJSON
-	return s.scriptRepo.Update(script)
-}
-
-// GenerateSummary 用 AI 生成剧本一句话梗概并保存
-// userID 用于权限校验；providerID 可选，指定自定义模型
-func (s *ScriptService) GenerateSummary(scriptID, userID, providerID string) (string, error) {
-	script, err := s.scriptRepo.Get(scriptID)
-	if err != nil {
-		return "", fmt.Errorf("剧本不存在: %w", err)
-	}
-
-	var scenes []model.Scene
-	if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
-		return "", fmt.Errorf("解析场景数据失败: %w", err)
-	}
-
-	var sb strings.Builder
-	for _, sc := range scenes {
-		sb.WriteString(fmt.Sprintf("场景%d: %s\n", sc.Sequence, sc.Title))
-		for _, c := range sc.Content {
-			switch c.Type {
-			case "action":
-				sb.WriteString(fmt.Sprintf("  [动作] %s\n", c.Description))
-			case "dialogue":
-				sb.WriteString(fmt.Sprintf("  [%s] %s\n", c.CharacterName, c.Text))
-			}
-		}
-	}
-
-	// 解析 provider 配置
-	var summary string
-	cfg, _ := s.resolveProvider(providerID, userID)
-	if cfg.APIKey != "" && cfg.Name != "system-default" {
-		summary, err = s.aiClient.GenerateScriptSummaryWithConfig(cfg, sb.String())
-	} else {
-		summary, err = s.aiClient.GenerateScriptSummary(sb.String())
-	}
-	if err != nil {
-		return "", fmt.Errorf("AI 生成梗概失败: %w", err)
-	}
-
-	summary = strings.TrimSpace(summary)
-	script.Summary = summary
-	if err := s.scriptRepo.Update(script); err != nil {
-		return "", fmt.Errorf("保存梗概失败: %w", err)
-	}
-
-	return summary, nil
-}
-
-// GenerateCharacterAppearances 用 AI 生成角色外貌描述并保存回剧本
-func (s *ScriptService) GenerateCharacterAppearances(scriptID, userID, providerID string) ([]model.Character, error) {
-	script, err := s.scriptRepo.Get(scriptID)
-	if err != nil {
-		return nil, fmt.Errorf("剧本不存在: %w", err)
-	}
-
-	var characters []model.Character
-	if err := json.Unmarshal(script.Characters, &characters); err != nil {
-		return nil, fmt.Errorf("解析角色数据失败: %w", err)
-	}
-	if len(characters) == 0 {
-		return nil, fmt.Errorf("剧本中暂无角色")
-	}
-
-	// 构建角色精简 JSON（给 AI 参考用）
-	charsForAI := make([]map[string]string, 0, len(characters))
-	for _, ch := range characters {
-		charsForAI = append(charsForAI, map[string]string{
-			"id":   ch.ID,
-			"name": ch.Name,
-			"type": ch.Type,
-			"desc": ch.Description,
-			"role": ch.Arc,
-		})
-	}
-	charsJSON, _ := json.Marshal(charsForAI)
-
-	// 构建剧情摘要
-	var scenes []model.Scene
-	json.Unmarshal(script.Scenes, &scenes)
-	var sb strings.Builder
-	for _, sc := range scenes {
-		sb.WriteString(fmt.Sprintf("场景%d《%s》: ", sc.Sequence, sc.Title))
-		for _, c := range sc.Content {
-			if c.Type == "action" && len(c.Description) > 0 {
-				sb.WriteString(string([]rune(c.Description)))
-				if len([]rune(c.Description)) > 60 {
-					sb.WriteString(string([]rune(c.Description)[:60]) + "…")
-				} else {
-					sb.WriteString(c.Description)
-				}
-				break
-			}
-		}
-		sb.WriteString("\n")
-	}
-
-	cfg, _ := s.resolveProvider(providerID, userID)
-	var results []map[string]string
-	if cfg.APIKey != "" && cfg.Name != "system-default" {
-		results, err = s.aiClient.GenerateCharacterAppearancesWithConfig(cfg, string(charsJSON), sb.String())
-	} else {
-		results, err = s.aiClient.GenerateCharacterAppearances(string(charsJSON), sb.String())
-	}
-	if err != nil {
-		return nil, fmt.Errorf("AI 生成角色外貌失败: %w", err)
-	}
-
-	// 把外貌描述合并回角色
-	appMap := make(map[string]string, len(results))
-	for _, r := range results {
-		appMap[r["id"]] = r["appearance"]
-	}
-	for i := range characters {
-		if app, ok := appMap[characters[i].ID]; ok && app != "" {
-			characters[i].Appearance = app
-		}
-	}
-
-	charsBytes, _ := json.Marshal(characters)
-	script.Characters = charsBytes
-	if err := s.scriptRepo.Update(script); err != nil {
-		return nil, fmt.Errorf("保存角色外貌失败: %w", err)
-	}
-
-	return characters, nil
-}
-
-// GenerateSceneEnvironments 用 AI 生成场景环境/氛围描述并保存回剧本
-func (s *ScriptService) GenerateSceneEnvironments(scriptID, userID, providerID string) ([]model.Scene, error) {
-	script, err := s.scriptRepo.Get(scriptID)
-	if err != nil {
-		return nil, fmt.Errorf("剧本不存在: %w", err)
-	}
-
-	var scenes []model.Scene
-	if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
-		return nil, fmt.Errorf("解析场景数据失败: %w", err)
-	}
-	if len(scenes) == 0 {
-		return nil, fmt.Errorf("剧本中暂无场景")
-	}
-
-	// 构建场景精简 JSON（给 AI 参考用）
-	scenesForAI := make([]map[string]string, 0, len(scenes))
-	for _, sc := range scenes {
-		scenesForAI = append(scenesForAI, map[string]string{
-			"id":       sc.ID,
-			"title":    sc.Title,
-			"location": sc.Slugline.Name,
-			"type":     sc.Slugline.Type,
-			"time":     sc.Slugline.Time,
-		})
-	}
-	scenesJSON, _ := json.Marshal(scenesForAI)
-
-	cfg, _ := s.resolveProvider(providerID, userID)
-	var results []map[string]string
-	if cfg.APIKey != "" && cfg.Name != "system-default" {
-		results, err = s.aiClient.GenerateSceneEnvironmentsWithConfig(cfg, string(scenesJSON))
-	} else {
-		results, err = s.aiClient.GenerateSceneEnvironments(string(scenesJSON))
-	}
-	if err != nil {
-		return nil, fmt.Errorf("AI 生成场景环境失败: %w", err)
-	}
-
-	// 把环境描述合并回场景的 mood 字段
-	envMap := make(map[string]string, len(results))
-	for _, r := range results {
-		envMap[r["id"]] = r["environment"]
-	}
-	for i := range scenes {
-		if env, ok := envMap[scenes[i].ID]; ok && env != "" {
-			scenes[i].Mood = env
-		}
-	}
-
-	scenesBytes, _ := json.Marshal(scenes)
-	script.Scenes = scenesBytes
-	if err := s.scriptRepo.Update(script); err != nil {
-		return nil, fmt.Errorf("保存场景环境失败: %w", err)
-	}
-
-	return scenes, nil
-}
-
-// SaveScript 全量保存剧本（编辑后整体提交）
+// SaveScript 全量保存剧本
 func (s *ScriptService) SaveScript(scriptID string, updated *model.Script) error {
 	_, err := s.scriptRepo.Get(scriptID)
 	if err != nil {
@@ -515,235 +326,30 @@ func (s *ScriptService) SaveScript(scriptID string, updated *model.Script) error
 	return s.scriptRepo.Update(updated)
 }
 
-// ExportYAML 将结构化剧本导出为标准剧本 YAML
-func (s *ScriptService) ExportYAML(scriptID, userID, role string) (string, error) {
-	script, err := s.scriptRepo.Get(scriptID)
-	if err != nil {
-		return "", fmt.Errorf("剧本不存在: %w", err)
-	}
-	return s.scriptToYAML(script)
-}
-
-// ExportYAMLByTaskID 按 taskID 导出 YAML
-func (s *ScriptService) ExportYAMLByTaskID(taskID string) (string, error) {
-	script, err := s.scriptRepo.GetByTaskID(taskID)
-	if err != nil {
-		return "", fmt.Errorf("剧本不存在: %w", err)
-	}
-	return s.scriptToYAML(script)
-}
-
-// scriptToYAML 将 Script 结构体转换为格式化的 YAML 字符串
-func (s *ScriptService) scriptToYAML(script *model.Script) (string, error) {
-	// 解析 metadata
-	var meta model.Metadata
-	if err := json.Unmarshal(script.Metadata, &meta); err != nil {
-		return "", fmt.Errorf("解析剧本元数据失败: %w", err)
-	}
-
-	// 解析 characters
-	var chars []model.Character
-	if len(script.Characters) > 0 && string(script.Characters) != "null" {
-		if err := json.Unmarshal(script.Characters, &chars); err != nil {
-			return "", fmt.Errorf("解析角色数据失败: %w", err)
-		}
-	}
-
-	// 解析 scenes
-	var scenes []model.Scene
-	if len(script.Scenes) > 0 && string(script.Scenes) != "null" {
-		if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
-			return "", fmt.Errorf("解析场景数据失败: %w", err)
-		}
-	}
-
-	// 构建 YAML 文档结构
-	type sluglineYAML struct {
-		Type string `yaml:"type"`
-		Name string `yaml:"name"`
-		Time string `yaml:"time"`
-	}
-
-	type contentLineYAML struct {
-		Type           string `yaml:"type,omitempty"`
-		Description    string `yaml:"description,omitempty"`
-		CharacterName  string `yaml:"character_name,omitempty"`
-		Text           string `yaml:"text,omitempty"`
-		Parenthetical  string `yaml:"parenthetical,omitempty"`
-		TransitionType string `yaml:"transition_type,omitempty"`
-		SoundType      string `yaml:"sound_type,omitempty"`
-		SoundDesc      string `yaml:"sound_description,omitempty"`
-	}
-
-	type sceneYAML struct {
-		Sequence int               `yaml:"sequence"`
-		Title    string            `yaml:"title"`
-		Slugline sluglineYAML      `yaml:"slugline"`
-		Content  []contentLineYAML `yaml:"content"`
-	}
-
-	doc := map[string]interface{}{
-		"title":          meta.Title,
-		"original_title": meta.OriginalTitle,
-		"format":         meta.Format,
-		"genre":          meta.Genre,
-	}
-
-	if len(chars) > 0 {
-		doc["characters"] = chars
-	}
-
-	if len(scenes) > 0 {
-		sceneList := make([]sceneYAML, len(scenes))
-		for i, sc := range scenes {
-			sy := sceneYAML{
-				Sequence: sc.Sequence,
-				Title:    sc.Title,
-				Slugline: sluglineYAML{
-					Type: sc.Slugline.Type,
-					Name: sc.Slugline.Name,
-					Time: sc.Slugline.Time,
-				},
-			}
-			for _, c := range sc.Content {
-				sy.Content = append(sy.Content, contentLineYAML{
-					Type:           c.Type,
-					Description:    c.Description,
-					CharacterName:  c.CharacterName,
-					Text:           c.Text,
-					Parenthetical:  c.Parenthetical,
-					TransitionType: c.TransitionType,
-					SoundType:      c.SoundType,
-					SoundDesc:      c.SoundDescription,
-				})
-			}
-			sceneList[i] = sy
-		}
-		doc["scenes"] = sceneList
-	}
-
-	var buf strings.Builder
-	enc := yaml.NewEncoder(&buf)
-	enc.SetIndent(2)
-	if err := enc.Encode(doc); err != nil {
-		return "", fmt.Errorf("YAML 编码失败: %w", err)
-	}
-
-	return buf.String(), nil
-}
-
-// UpdateContent 更新指定剧本中的某个内容块
-func (s *ScriptService) UpdateContent(scriptID, contentID string, content model.SceneContent) error {
+// DeleteScript 删除剧本及其关联任务
+func (s *ScriptService) DeleteScript(scriptID, userID string) error {
 	script, err := s.scriptRepo.Get(scriptID)
 	if err != nil {
 		return fmt.Errorf("剧本不存在: %w", err)
 	}
 
-	var scenes []model.Scene
-	if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
-		return fmt.Errorf("解析场景数据失败: %w", err)
-	}
-
-	found := false
-	for i := range scenes {
-		for j := range scenes[i].Content {
-			if scenes[i].Content[j].ID == contentID {
-				scenes[i].Content[j] = content
-				found = true
-				break
-			}
+	// 权限校验：通过关联的作品检查归属
+	if script.WorkID != nil && *script.WorkID != "" {
+		work, err := s.workRepo.Get(*script.WorkID)
+		if err != nil {
+			return fmt.Errorf("关联作品不存在: %w", err)
 		}
-		if found {
-			break
+		if work.UserID != userID {
+			return fmt.Errorf("无权删除该剧本")
 		}
 	}
-	if !found {
-		return fmt.Errorf("内容块 %s 不存在", contentID)
-	}
 
-	scenesJSON, err := json.Marshal(scenes)
-	if err != nil {
-		return fmt.Errorf("序列化场景失败: %w", err)
-	}
-
-	script.Scenes = scenesJSON
-	return s.scriptRepo.Update(script)
-}
-
-// AddContent 向指定场景中添加内容块
-func (s *ScriptService) AddContent(scriptID, sceneID string, content model.SceneContent) (*model.SceneContent, error) {
-	script, err := s.scriptRepo.Get(scriptID)
-	if err != nil {
-		return nil, fmt.Errorf("剧本不存在: %w", err)
-	}
-
-	var scenes []model.Scene
-	if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
-		return nil, fmt.Errorf("解析场景数据失败: %w", err)
-	}
-
-	found := false
-	for i := range scenes {
-		if scenes[i].ID == sceneID {
-			if content.ID == "" {
-				content.ID = uuid.New().String()
-			}
-			scenes[i].Content = append(scenes[i].Content, content)
-			found = true
-			break
+	// 删除关联任务
+	if script.TaskID != "" {
+		if err := s.taskRepo.Delete(script.TaskID); err != nil {
+			log.Printf("删除任务 %s 失败: %v", script.TaskID, err)
 		}
 	}
-	if !found {
-		return nil, fmt.Errorf("场景 %s 不存在", sceneID)
-	}
 
-	scenesJSON, err := json.Marshal(scenes)
-	if err != nil {
-		return nil, fmt.Errorf("序列化场景失败: %w", err)
-	}
-
-	script.Scenes = scenesJSON
-	if err := s.scriptRepo.Update(script); err != nil {
-		return nil, fmt.Errorf("保存剧本失败: %w", err)
-	}
-
-	return &content, nil
-}
-
-// DeleteContent 删除指定内容块
-func (s *ScriptService) DeleteContent(scriptID, contentID string) error {
-	script, err := s.scriptRepo.Get(scriptID)
-	if err != nil {
-		return fmt.Errorf("剧本不存在: %w", err)
-	}
-
-	var scenes []model.Scene
-	if err := json.Unmarshal(script.Scenes, &scenes); err != nil {
-		return fmt.Errorf("解析场景数据失败: %w", err)
-	}
-
-	found := false
-	for i := range scenes {
-		for j := range scenes[i].Content {
-			if scenes[i].Content[j].ID == contentID {
-				scenes[i].Content = append(scenes[i].Content[:j], scenes[i].Content[j+1:]...)
-				found = true
-				break
-			}
-		}
-		if found {
-			break
-		}
-	}
-	if !found {
-		return fmt.Errorf("内容块 %s 不存在", contentID)
-	}
-
-	scenesJSON, err := json.Marshal(scenes)
-	if err != nil {
-		return fmt.Errorf("序列化场景失败: %w", err)
-	}
-
-	script.Scenes = scenesJSON
-	return s.scriptRepo.Update(script)
+	return s.scriptRepo.Delete(scriptID)
 }
