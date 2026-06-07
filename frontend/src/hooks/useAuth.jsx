@@ -11,7 +11,7 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  const isLoggedIn = !!token && !!user;
+  const isLoggedIn = !loading && !!token && !!user;
 
   // 初始化：验证 token 是否有效，无效则尝试 refresh
   useEffect(() => {
