@@ -7,8 +7,7 @@ import {
   Typography,
   Spin,
   Empty,
-  message,
-  Modal,
+  App,
   Tag,
   Space,
   Tooltip,
@@ -23,20 +22,9 @@ import {
   FileTextOutlined,
 } from '@ant-design/icons';
 import { listWorks, deleteWork } from '../services/work';
+import { getFormatShortLabel, getFormatColor } from '../utils/scriptOptions';
 
 const { Title, Text, Paragraph } = Typography;
-
-const genreColor = {
-  film: '#1890ff',
-  tv_series: '#52c41a',
-  stage_play: '#722ed1',
-};
-
-const genreLabel = {
-  film: '电影',
-  tv_series: '电视剧',
-  stage_play: '舞台剧',
-};
 
 const formatWordCount = (n) => {
   if (!n) return '0';
@@ -45,6 +33,7 @@ const formatWordCount = (n) => {
 };
 
 export default function WorkListPage() {
+  const { modal, message } = App.useApp();
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -67,7 +56,7 @@ export default function WorkListPage() {
   };
 
   const handleDelete = (id, title) => {
-    Modal.confirm({
+    modal.confirm({
       title: `确认删除「${title}」?`,
       content: '删除后将同时移除所有关联的剧本和场景数据，此操作不可恢复。',
       okText: '确认删除',
@@ -141,6 +130,7 @@ export default function WorkListPage() {
         <List
           grid={{ gutter: 24, xs: 1, sm: 1, md: 2, lg: 2, xl: 3, xxl: 3 }}
           dataSource={works}
+          pagination={{ pageSize: 6 }}
           renderItem={(work) => {
             const charProfiles = parseCharProfiles(work);
             const mainChar = charProfiles.length > 0 ? charProfiles[0] : null;
@@ -163,14 +153,14 @@ export default function WorkListPage() {
                       <div
                         style={{
                           height: 140,
-                          background: `linear-gradient(135deg, ${genreColor[work.genre] || '#3a6b28'}22, ${genreColor[work.genre] || '#3a6b28'}44)`,
+                          background: `linear-gradient(135deg, ${getFormatColor(work.genre) || '#3a6b28'}22, ${getFormatColor(work.genre) || '#3a6b28'}44)`,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontSize: 48,
                         }}
                       >
-                        <BookOutlined style={{ opacity: 0.5, color: genreColor[work.genre] || '#3a6b28' }} />
+                        <BookOutlined style={{ opacity: 0.5, color: getFormatColor(work.genre) || '#3a6b28' }} />
                       </div>
                     )
                   }
@@ -203,7 +193,7 @@ export default function WorkListPage() {
                       mainChar ? (
                         <Avatar
                           size={44}
-                          style={{ backgroundColor: genreColor[work.genre] || '#3a6b28' }}
+                          style={{ backgroundColor: getFormatColor(work.genre) || '#3a6b28' }}
                           icon={<UserOutlined />}
                         >
                           {mainChar.name?.[0]}
@@ -211,7 +201,7 @@ export default function WorkListPage() {
                       ) : (
                         <Avatar
                           size={44}
-                          style={{ backgroundColor: genreColor[work.genre] || '#3a6b28' }}
+                          style={{ backgroundColor: getFormatColor(work.genre) || '#3a6b28' }}
                           icon={<UserOutlined />}
                         />
                       )
@@ -219,8 +209,8 @@ export default function WorkListPage() {
                     title={
                       <Space>
                         <Text strong style={{ fontSize: 16 }}>{work.title}</Text>
-                        <Tag color={genreColor[work.genre] || 'default'}>
-                          {genreLabel[work.genre] || work.genre}
+                        <Tag color={getFormatColor(work.genre) || 'default'}>
+                          {getFormatShortLabel(work.genre)}
                         </Tag>
                       </Space>
                     }
@@ -239,7 +229,7 @@ export default function WorkListPage() {
                             <span>
                               <UserOutlined style={{ marginRight: 4 }} />
                               {mainChar.name}
-                              {mainChar.age && ` ${mainChar.age}岁`}
+                              {mainChar.age && ` ${mainChar.age}`}
                               {mainChar.gender && `·${mainChar.gender}`}
                             </span>
                           )}
