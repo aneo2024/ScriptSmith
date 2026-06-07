@@ -57,15 +57,34 @@ func (h *ScriptHandler) GetTask(c *gin.Context) {
 		return
 	}
 	OK(c, gin.H{
-		"id":         task.ID,
-		"status":     task.Status,
-		"progress":   task.Progress,
-		"format":     task.Format,
-		"style":      task.Style,
-		"created_at": task.CreatedAt,
-		"updated_at": task.UpdatedAt,
-		"error_msg":  task.ErrorMsg,
+		"id":            task.ID,
+		"status":        task.Status,
+		"current_stage": task.CurrentStage,
+		"progress":      task.Progress,
+		"format":        task.Format,
+		"style":         task.Style,
+		"created_at":    task.CreatedAt,
+		"updated_at":    task.UpdatedAt,
+		"error_msg":     task.ErrorMsg,
 	})
+}
+
+// CancelTask 取消任务（状态改为 failed，带 "用户取消" 提示）
+// DELETE /v1/task/:id
+func (h *ScriptHandler) CancelTask(c *gin.Context) {
+	id := c.Param("id")
+	userID := c.GetString("userID")
+	role := c.GetString("role")
+	if err := h.svc.CancelTask(id, userID, role); err != nil {
+		msg := err.Error()
+		if msg == "任务不存在" {
+			ErrorNotFound(c, msg)
+		} else {
+			ErrorBadRequest(c, msg)
+		}
+		return
+	}
+	OK(c, gin.H{"status": "ok", "message": "任务已取消"})
 }
 
 // GetScript 获取转换完成的 YAML 剧本（优先从 Script 表生成）
@@ -320,6 +339,26 @@ func (h *ScriptHandler) GenerateCharacterAppearances(c *gin.Context) {
 		return
 	}
 	OK(c, gin.H{"characters": characters})
+}
+
+// DeleteScript 删除剧本及其关联任务
+// DELETE /v1/scripts/:scriptID
+func (h *ScriptHandler) DeleteScript(c *gin.Context) {
+	scriptID := c.Param("scriptID")
+	userID := c.GetString("userID")
+
+	if err := h.svc.DeleteScript(scriptID, userID); err != nil {
+		msg := err.Error()
+		if msg == "剧本不存在" || msg[:6] == "剧本不存在" {
+			ErrorNotFound(c, msg)
+		} else if msg == "无权删除该剧本" {
+			ErrorForbidden(c, msg)
+		} else {
+			ErrorInternal(c, msg)
+		}
+		return
+	}
+	OK(c, gin.H{"status": "ok"})
 }
 
 // GenerateSceneEnvironments AI 生成场景环境/氛围描述

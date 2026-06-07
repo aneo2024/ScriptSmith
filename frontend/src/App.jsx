@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider, App as AntdApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import AppLayout from './components/Layout';
 import AuthGuard from './components/AuthGuard';
@@ -51,13 +51,15 @@ function AppRoutes() {
 function App() {
   return (
     <ConfigProvider locale={zhCN} theme={{ token: { colorPrimary: '#3a6b28' } }}>
-      <AuthProvider>
-        <TaskProvider>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </TaskProvider>
-      </AuthProvider>
+      <AntdApp>
+        <AuthProvider>
+          <TaskProvider>
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </TaskProvider>
+        </AuthProvider>
+      </AntdApp>
     </ConfigProvider>
   );
 }

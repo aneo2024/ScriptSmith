@@ -434,12 +434,13 @@ func truncate(s string, maxLen int) string {
 }
 
 // buildStructuredPrompt 构建结构化 JSON 输出的 Prompt
+// 注：format/style 的 key 与默认值（"film"/"faithful"）必须与前端 utils/scriptOptions.js 保持一致
 func buildStructuredPrompt(novelText, format, style string) string {
 	if format == "" {
 		format = "film"
 	}
 	if style == "" {
-		style = "realistic"
+		style = "faithful" // 与后端 service 层 ConvertNovel 的默认兜底一致
 	}
 
 	// 格式→中文名，提示 AI 以帮助生成更符合格式的创作

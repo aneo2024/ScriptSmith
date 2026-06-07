@@ -11,6 +11,7 @@ import {
   Divider,
   Tag,
   Space,
+  Alert,
 } from 'antd';
 import {
   UploadOutlined,
@@ -24,28 +25,17 @@ import {
 import { useTask } from '../hooks/useTask';
 import TaskProgress from '../components/TaskProgress';
 import { createWork, getWork } from '../services/work';
+import {
+  formatOptions,
+  styleOptions,
+  DEFAULT_FORMAT,
+  DEFAULT_STYLE,
+  getFormatShortLabel,
+} from '../utils/scriptOptions';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 const MAX_CHARS = 50000;
-
-const formatOptions = [
-  { value: 'film', label: '电影' },
-  { value: 'tv_series', label: '电视剧' },
-  { value: 'stage_play', label: '舞台剧' },
-];
-
-const styleOptions = [
-  { value: 'faithful', label: '忠实原著' },
-  { value: 'commercial', label: '商业化' },
-  { value: 'experimental', label: '实验性' },
-];
-
-const formatMap = {
-  film: '电影',
-  tv_series: '电视剧',
-  stage_play: '舞台剧',
-};
 
 const emptyChar = { name: '', age: '', gender: '', personality: '' };
 
@@ -57,20 +47,20 @@ export default function CreateWorkPage() {
   const [synopsis, setSynopsis] = useState('');
   const [novelText, setNovelText] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [format, setFormat] = useState('film');
-  const [style, setStyle] = useState('faithful');
+  const [format, setFormat] = useState(DEFAULT_FORMAT);
+  const [style, setStyle] = useState(DEFAULT_STYLE);
   const [saving, setSaving] = useState(false);
   const [existingWork, setExistingWork] = useState(null);
   const [characters, setCharacters] = useState([]);
   const navigate = useNavigate();
-  const { submit, status, progress, error, isActive, taskId } = useTask();
+  const { submit, status, progress, error, isActive, taskId, stage, elapsedMs, cancel, reset } = useTask();
 
   useEffect(() => {
     if (existingWorkId) {
       getWork(existingWorkId).then((w) => {
         setExistingWork(w);
         setWorkTitle(w.title);
-        setFormat(w.genre || 'film');
+        setFormat(w.genre || DEFAULT_FORMAT);
       }).catch(() => {});
     }
   }, [existingWorkId]);
@@ -188,7 +178,7 @@ export default function CreateWorkPage() {
               <Text strong>作品</Text>
               <div style={{ marginTop: 8, padding: '8px 12px', background: '#f5f5f5', borderRadius: 6, fontSize: 15 }}>
                 {workTitle}
-                <Tag style={{ marginLeft: 8 }}>{formatMap[format] || format}</Tag>
+                <Tag style={{ marginLeft: 8 }}>{getFormatShortLabel(format)}</Tag>
               </div>
             </div>
           ) : (
@@ -345,13 +335,29 @@ export default function CreateWorkPage() {
         style={{ flex: 1 }}
         title={isExistingWork ? `为「${workTitle}」输入新的小说文本` : '输入小说文本'}
       >
-        {error && (
-          <Card
-            size="small"
-            style={{ marginBottom: 16, background: '#fff2f0', borderColor: '#ffccc7' }}
-          >
-            <Text type="danger">{error}</Text>
-          </Card>
+        {/* 进度面板（polling 时置顶） */}
+        {isPolling && (
+          <div style={{ marginBottom: 20 }}>
+            <TaskProgress
+              status={status}
+              progress={progress}
+              stage={stage}
+              elapsedMs={elapsedMs}
+              error={error}
+              onCancel={cancel}
+              onReset={reset}
+            />
+          </div>
+        )}
+
+        {/* 锁定提示 */}
+        {isPolling && (
+          <Alert
+            type="info"
+            message="输入内容已锁定，AI 正在后台生成剧本，你可以关闭此页面，稍后回来继续。"
+            style={{ marginBottom: 16 }}
+            closable={false}
+          />
         )}
 
         <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
@@ -389,12 +395,6 @@ export default function CreateWorkPage() {
           <Text type="warning" style={{ display: 'block', marginBottom: 12 }}>
             文本较长，AI 转换可能因 token 限制而截断，建议分段转换。
           </Text>
-        )}
-
-        {isPolling && (
-          <div style={{ marginTop: 24 }}>
-            <TaskProgress status={status} progress={progress} />
-          </div>
         )}
       </Card>
     </div>
