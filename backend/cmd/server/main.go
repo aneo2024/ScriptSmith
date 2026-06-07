@@ -100,6 +100,7 @@ func main() {
 			auth.POST("/auth/logout", authH.Logout)
 			auth.POST("/convert", h.Convert)
 			auth.GET("/task/:id", h.GetTask)
+			auth.DELETE("/task/:id", h.CancelTask)
 			auth.GET("/script/:id", h.GetScript)
 			auth.GET("/script/:id/characters", h.GetCharacters)
 			auth.GET("/script/:id/scenes", h.GetScenes)
@@ -116,6 +117,7 @@ func main() {
 			auth.PUT("/scripts/:scriptID/contents/:contentID", h.UpdateContent)
 			auth.POST("/scripts/:scriptID/scenes/:sceneID/contents", h.AddContent)
 			auth.DELETE("/scripts/:scriptID/contents/:contentID", h.DeleteContent)
+			auth.DELETE("/scripts/:scriptID", h.DeleteScript)
 
 			// 作品 CRUD
 			auth.POST("/works", workH.CreateWork)
