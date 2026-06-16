@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Input, Button, Typography, message } from 'antd';
+import { Input, Button, Typography, App } from 'antd';
 import { useAuth } from '../hooks/useAuth';
 import { register as registerApi } from '../services/auth';
 import ForestLightParticles from '../components/ForestLightParticles';
@@ -53,6 +53,7 @@ function LoginForm({ onClose, onSuccess }) {
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const { login } = useAuth();
+  const { message } = App.useApp();
 
   const handleLogin = async () => {
     if (!username.trim() || !password) {
@@ -65,7 +66,8 @@ function LoginForm({ onClose, onSuccess }) {
       message.success('登录成功');
       onSuccess();
     } catch (err) {
-      message.error(err.response?.data?.error || '登录失败');
+      const apiMsg = err?.response?.data?.message || err?.serverMessage || err?.message;
+      message.error(apiMsg || '登录失败');
     } finally {
       setLoading(false);
     }
@@ -84,7 +86,8 @@ function LoginForm({ onClose, onSuccess }) {
       setPassword('');
       setEmail('');
     } catch (err) {
-      message.error(err.response?.data?.error || '注册失败');
+      const apiMsg = err?.response?.data?.message || err?.serverMessage || err?.message;
+      message.error(apiMsg || '注册失败');
     } finally {
       setLoading(false);
     }

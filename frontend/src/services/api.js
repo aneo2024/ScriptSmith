@@ -51,11 +51,21 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+    const requestUrl = originalRequest?.url || '';
 
     // 尝试从响应包装里读取更友好的错误消息
     const wrapped = error.response?.data;
     if (wrapped && typeof wrapped === 'object' && wrapped.message) {
-      error.message = wrapped.message;
+      // 同时设置 message 和自定义字段，兼容两种取法
+      try { error.message = wrapped.message; } catch { /* AxiosError.message 不可写时忽略 */ }
+      error.serverMessage = wrapped.message;
+      error.serverCode = wrapped.code;
+    }
+
+    // 登录/注册/刷新接口的 401 应当原样抛出，不触发自动跳转
+    const isAuthEndpoint = /^\/?auth\/(login|register|refresh)/.test(requestUrl);
+    if (isAuthEndpoint) {
+      return Promise.reject(error);
     }
 
     if (error.response?.status !== 401 || originalRequest._retry) {

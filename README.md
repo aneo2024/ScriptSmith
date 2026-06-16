@@ -1,6 +1,6 @@
 # 剧匠 ScriptSmith
 
-将小说文本通过 AI 转换为结构化剧本，支持多格式、多剧集管理、角色/场景编辑与 YAML 导出。
+将小说文本通过 AI 转换为结构化剧本，支持多格式、多剧集管理、角色小传生成与 YAML 导出。
 
 **项目演示视频**: [B站链接](https://www.bilibili.com/video/BV1yuEh6GE3L/?vd_source=8ac9ee2de57af0dd1bba425929e7f095)
 
@@ -100,18 +100,33 @@ go test -cover ./...
 
 ## 功能清单
 
+### 核心功能
 - [x] 用户注册/登录（JWT + Refresh Token 一次性轮换）
 - [x] 小说文本输入与 AI 转换（DeepSeek / 自定义模型）
-- [x] 异步任务进度跟踪
+- [x] 异步任务进度跟踪（支持离开页面后继续生成）
 - [x] 多格式支持：电影 / 电视剧 / 舞台剧 / 动画 / 短片 / 网剧 / 纪录片
 - [x] 多改编风格：忠实 / 商业 / 实验 / 悬疑 / 武侠 / 仙侠 / 喜剧 / 悲剧等
-- [x] 作品 & 多剧集管理（CRUD）
-- [x] AI 生成剧本摘要、角色外貌、场景环境
-- [x] 作品级角色人设卡（长相、年龄、性格、背景）
+
+### 作品管理
+- [x] 作品 CRUD 与统计
+- [x] 多剧集管理（删除后自动重新编号）
+- [x] 作品级角色人设卡
+
+### 剧本编辑
 - [x] 结构化剧本编辑器（场景导航 + 内容块增删改）
 - [x] YAML 语法高亮编辑与导出
+- [x] AI 生成剧本摘要、角色外貌、场景环境
+
+### 人物小传
+- [x] 作品级人物小传管理
+- [x] 独立人物小传页面（AI 生成生平传记 + 手动编辑）
+- [x] 支持外貌、性格、背景、生平文章四个维度
+
+### 灵感创作
 - [x] 灵感文章浏览与 AI 生成
 - [x] 话题系统与每日推荐
+
+### 系统功能
 - [x] 自定义 AI Provider 管理（多模型配置、连接测试）
 - [x] 管理员面板
 
@@ -154,8 +169,13 @@ ScriptSmith/
 ├── backend/
 │   ├── cmd/server/main.go     # 入口：路由注册、数据库初始化
 │   └── internal/
-│       ├── ai/                # AI 客户端封装
+│       ├── ai/                # AI 客户端封装（小说转换、角色生成、生平传记）
 │       ├── handler/           # HTTP 请求处理器
+│       │   ├── auth_handler.go
+│       │   ├── script_handler.go
+│       │   ├── work_handler.go           # 作品 CRUD
+│       │   ├── work_character_handler.go # 人物小传 API
+│       │   └── ...
 │       ├── middleware/        # JWT 认证、角色鉴权
 │       ├── model/             # 数据模型（GORM）
 │       ├── repository/        # 数据访问层
@@ -164,8 +184,12 @@ ScriptSmith/
 ├── frontend/
 │   └── src/
 │       ├── pages/             # 页面组件
+│       │   ├── CreateWorkPage.jsx        # 创建作品 + 人物卡片
+│       │   ├── WorkDetailPage.jsx        # 作品详情 + 人物小传列表
+│       │   ├── CharacterProfilePage.jsx  # 人物小传生成/编辑
+│       │   └── ...
 │       ├── components/        # 可复用组件
-│       ├── hooks/             # 自定义 Hooks
+│       ├── hooks/             # 自定义 Hooks（useTask 支持后台轮询）
 │       ├── services/          # API 请求封装
 │       ├── store/             # Zustand 状态管理
 │       └── utils/             # 工具函数
@@ -176,17 +200,94 @@ ScriptSmith/
 
 所有 API 挂载在 `/v1` 前缀下，需认证的接口在请求头携带 `Authorization: Bearer <token>`。
 
-| 模块 | 端点 |
-|------|------|
-| 认证 | `POST /auth/register` `POST /auth/login` `POST /auth/refresh` `POST /auth/logout` `GET /auth/me` |
-| 转换 | `POST /convert` `GET /task/:id` |
-| 剧本 | `GET /scripts/by-task/:taskID` `GET /scripts/:id` `PUT /scripts/:id` `GET /scripts/:id/yaml` `GET /scripts/:id/characters` `GET /scripts/:id/scenes` |
-| 场景 | `PUT /scripts/:id/scenes/:sid` `POST /scripts/:id/scenes/:sid/contents` `DELETE /scripts/:id/contents/:cid` |
-| 作品 | `POST /works` `GET /works` `GET /works/stats` `GET /works/count` `GET /works/:id` `PUT /works/:id` `DELETE /works/:id` `GET /works/:id/scripts` |
-| AI 增强 | `POST /scripts/:id/summary` `POST /scripts/:id/characters/appearance` `POST /scripts/:id/scenes/environment` `POST /works/:id/characters/profiles` |
-| 灵感 | `GET/POST /inspiration/articles` `GET /inspiration/articles/:id` `POST /inspiration/articles/:id/like` `POST /inspiration/generate` `GET/POST /inspiration/topics` `GET /inspiration/topics/today` |
-| AI 管理 | `GET/POST /ai/providers` `PUT /ai/providers/:id` `DELETE /ai/providers/:id` `PUT /ai/providers/:id/default` `POST /ai/providers/:id/test` |
-| 管理 | `GET /admin/tasks` |
+### 认证
+
+| 方法 | 端点 | 说明 |
+|------|------|------|
+| POST | `/auth/register` | 用户注册 |
+| POST | `/auth/login` | 登录获取 token |
+| POST | `/auth/refresh` | 刷新 token |
+| POST | `/auth/logout` | 登出 |
+| GET | `/auth/me` | 获取当前用户信息 |
+
+### 转换任务
+
+| 方法 | 端点 | 说明 |
+|------|------|------|
+| POST | `/convert` | 提交小说转换任务 |
+| GET | `/task/:id` | 查询任务状态 |
+| DELETE | `/task/:id` | 取消任务 |
+
+### 剧本
+
+| 方法 | 端点 | 说明 |
+|------|------|------|
+| GET | `/scripts/by-task/:taskID` | 按任务 ID 获取剧本 |
+| GET | `/scripts/:id` | 获取剧本详情 |
+| PUT | `/scripts/:id` | 保存剧本 |
+| DELETE | `/scripts/:id` | 删除剧本（自动重编号剩余剧集） |
+| GET | `/scripts/:id/yaml` | 导出 YAML |
+| GET | `/scripts/:id/characters` | 获取角色列表 |
+| GET | `/scripts/:id/scenes` | 获取场景列表 |
+| PUT | `/scripts/:id/scenes/:sid` | 更新场景 |
+| POST | `/scripts/:id/scenes/:sid/contents` | 添加内容块 |
+| DELETE | `/scripts/:id/contents/:cid` | 删除内容块 |
+
+### 作品
+
+| 方法 | 端点 | 说明 |
+|------|------|------|
+| POST | `/works` | 创建作品 |
+| GET | `/works` | 作品列表 |
+| GET | `/works/stats` | 统计（作品数 + 总字数） |
+| GET | `/works/count` | 作品数量 |
+| GET | `/works/:id` | 作品详情 |
+| PUT | `/works/:id` | 更新作品 |
+| DELETE | `/works/:id` | 删除作品（级联删除剧本） |
+| GET | `/works/:id/scripts` | 作品下的剧本列表 |
+
+### 人物小传
+
+| 方法 | 端点 | 说明 |
+|------|------|------|
+| POST | `/works/:id/characters/profiles` | AI 批量生成角色设定 |
+| POST | `/works/:id/characters/:index/biography` | AI 生成单人生平传记 |
+| PUT | `/works/:id/characters/:index` | 更新单个人物小传 |
+
+### AI 增强
+
+| 方法 | 端点 | 说明 |
+|------|------|------|
+| POST | `/scripts/:id/summary` | AI 生成剧本摘要 |
+| POST | `/scripts/:id/characters/appearance` | AI 生成角色外貌 |
+| POST | `/scripts/:id/scenes/environment` | AI 生成场景环境 |
+
+### 灵感
+
+| 方法 | 端点 | 说明 |
+|------|------|------|
+| GET/POST | `/inspiration/articles` | 文章列表 / 创建 |
+| GET | `/inspiration/articles/:id` | 文章详情 |
+| POST | `/inspiration/articles/:id/like` | 点赞 |
+| POST | `/inspiration/generate` | AI 生成文章 |
+| GET/POST | `/inspiration/topics` | 话题列表 / 创建 |
+| GET | `/inspiration/topics/today` | 今日推荐话题 |
+
+### AI Provider 管理
+
+| 方法 | 端点 | 说明 |
+|------|------|------|
+| GET/POST | `/ai/providers` | 列表 / 创建 |
+| PUT | `/ai/providers/:id` | 更新 |
+| DELETE | `/ai/providers/:id` | 删除 |
+| PUT | `/ai/providers/:id/default` | 设为默认 |
+| POST | `/ai/providers/:id/test` | 测试连接 |
+
+### 管理
+
+| 方法 | 端点 | 说明 |
+|------|------|------|
+| GET | `/admin/tasks` | 管理员查看所有任务 |
 
 ## License
 
