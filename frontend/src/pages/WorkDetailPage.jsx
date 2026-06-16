@@ -31,6 +31,7 @@ import {
   ReadOutlined,
   BulbOutlined,
   LoadingOutlined,
+  SkinOutlined,
   HeatMapOutlined,
 } from '@ant-design/icons';
 import { characterTypeLabel, characterTypeColor } from '../utils/parseScript';
@@ -40,6 +41,7 @@ import {
   listWorkScripts,
   updateWork,
   generateScriptSummary,
+  generateCharacterAppearances,
   generateSceneEnvironments,
   generateCharacterProfiles,
 } from '../services/work';
@@ -226,6 +228,7 @@ export default function WorkDetailPage() {
   const [activeScriptId, setActiveScriptId] = useState(null);
   const [activeTab, setActiveTab] = useState('summary');
   const [generatingSummaries, setGeneratingSummaries] = useState(new Set());
+  const [generatingAppearances, setGeneratingAppearances] = useState(new Set());
   const [generatingEnvironments, setGeneratingEnvironments] = useState(new Set());
   const [generatingProfiles, setGeneratingProfiles] = useState(false);
 
@@ -257,6 +260,24 @@ export default function WorkDetailPage() {
       message.error('生成梗概失败: ' + (err.response?.data?.error || err.message));
     } finally {
       setGeneratingSummaries((prev) => {
+        const next = new Set(prev);
+        next.delete(scriptId);
+        return next;
+      });
+    }
+  };
+
+  const handleGenerateAppearances = async (scriptId) => {
+    setGeneratingAppearances((prev) => new Set(prev).add(scriptId));
+    try {
+      await generateCharacterAppearances(scriptId);
+      message.success('角色外貌已生成');
+      const { scripts: refreshed } = await listWorkScripts(id);
+      setScripts(refreshed);
+    } catch (err) {
+      message.error('生成角色外貌失败: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setGeneratingAppearances((prev) => {
         const next = new Set(prev);
         next.delete(scriptId);
         return next;
@@ -386,27 +407,6 @@ export default function WorkDetailPage() {
 
     return { totalScenes, allChars, sceneCards, dialogueCount, actionCount };
   };
-
-  // merge characters across all episodes for 角色管理 tab
-  const mergedCharacters = (() => {
-    const map = new Map();
-    scripts.forEach((script) => {
-      let chars = [];
-      try {
-        if (script.characters) {
-          chars = typeof script.characters === 'string'
-            ? JSON.parse(script.characters)
-            : script.characters;
-        }
-      } catch { /* parse failed */ }
-      chars.forEach((c) => {
-        if (!map.has(c.name)) {
-          map.set(c.name, c);
-        }
-      });
-    });
-    return Array.from(map.values());
-  })();
 
   const workCharProfiles = (() => {
     if (!work?.character_profiles) return [];
@@ -663,9 +663,63 @@ export default function WorkDetailPage() {
             label: <span><TeamOutlined /> 角色管理</span>,
             children: (
               <div>
-                {/* work-level character profiles — large cards without truncation */}
+                <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Text strong>选择剧集：</Text>
+                  <Select
+                    style={{ width: 200 }}
+                    value={activeScriptId}
+                    onChange={setActiveScriptId}
+                    options={episodeSelectOptions}
+                  />
+                  <Button
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => navigate(`/editor?scriptId=${activeScriptId}&workId=${id}`)}
+                  >
+                    编辑此集
+                  </Button>
+                </div>
+                {activeScript ? (() => {
+                  let chars = [];
+                  try {
+                    if (activeScript.characters) {
+                      chars = typeof activeScript.characters === 'string'
+                        ? JSON.parse(activeScript.characters)
+                        : activeScript.characters;
+                    }
+                  } catch { /* parse failed */ }
+                  return chars.length > 0 ? (
+                    <>
+                      <div style={{ marginBottom: 16 }}>
+                        <Button
+                          size="small"
+                          icon={generatingAppearances.has(activeScript.id) ? <LoadingOutlined /> : <SkinOutlined />}
+                          loading={generatingAppearances.has(activeScript.id)}
+                          onClick={() => handleGenerateAppearances(activeScript.id)}
+                        >
+                          生成本集角色外貌
+                        </Button>
+                      </div>
+                      <Table
+                        dataSource={chars.map((c, i) => ({ ...c, key: c.id || i }))}
+                        columns={characterColumns}
+                        pagination={false}
+                        size="middle"
+                        locale={{ emptyText: '暂无角色' }}
+                      />
+                    </>
+                  ) : <Empty description="本集暂无角色数据" />;
+                })() : <Empty description="请选择剧集" />}
+              </div>
+            ),
+          },
+          {
+            key: 'profiles',
+            label: <span><TeamOutlined /> 人物小传</span>,
+            children: (
+              <div>
                 {workCharProfiles.length > 0 ? (
-                  <div style={{ marginBottom: 24 }}>
+                  <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                       <Text strong style={{ fontSize: 15 }}>人物小传（作品级）</Text>
                       <Button
@@ -718,7 +772,7 @@ export default function WorkDetailPage() {
                     </Row>
                   </div>
                 ) : (
-                  <div style={{ marginBottom: 24 }}>
+                  <div>
                     <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
                       尚未生成角色设定，AI 将根据剧情自动生成角色画像、年龄、性格和背景故事
                     </Text>
@@ -731,23 +785,6 @@ export default function WorkDetailPage() {
                       生成角色设定
                     </Button>
                   </div>
-                )}
-
-                {/* per-episode character table — merged across all episodes */}
-                {mergedCharacters.length > 0 && (
-                  <>
-                    <Divider />
-                    <Text strong style={{ display: 'block', marginBottom: 12, fontSize: 15 }}>
-                      <TeamOutlined style={{ marginRight: 4 }} />各集角色列表（全作品共 {mergedCharacters.length} 个角色）
-                    </Text>
-                    <Table
-                      dataSource={mergedCharacters.map((c, i) => ({ ...c, key: c.id || i }))}
-                      columns={characterColumns}
-                      pagination={false}
-                      size="middle"
-                      locale={{ emptyText: '暂无角色' }}
-                    />
-                  </>
                 )}
               </div>
             ),
