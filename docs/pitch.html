@@ -1,0 +1,244 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ScriptSmith 路演 — XEngineer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f5f8f3;color:#1a1a1a;line-height:1.8;overflow-x:hidden;font-size:18px}
+
+/* 滚动渐入 */
+.fade-in{opacity:0;transform:translateY(30px);transition:opacity 0.7s ease,transform 0.7s ease}
+.fade-in.visible{opacity:1;transform:translateY(0)}
+
+.slide{max-width:1100px;margin:0 auto;padding:70px 56px;min-height:100vh;display:flex;flex-direction:column;justify-content:center}
+h1{font-size:52px;font-weight:700;margin-bottom:8px}
+h2{font-size:34px;font-weight:600;margin-bottom:24px;color:#2d5a1e}
+h3{font-size:24px;font-weight:600;margin-bottom:10px}
+.subtitle{font-size:22px;color:#666;margin-bottom:28px}
+p{font-size:18px;line-height:1.8}
+.grid{display:grid;gap:24px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:1fr 1fr 1fr}
+
+.card{background:#fff;border:1px solid #e0e8db;border-radius:14px;padding:28px;transition:transform 0.25s ease,box-shadow 0.25s ease}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(45,90,30,0.1)}
+.card p{color:#555;font-size:17px;line-height:1.7}
+
+.tag{display:inline-block;padding:4px 14px;border-radius:6px;font-size:15px;margin-right:6px;margin-bottom:6px}
+.tag-blue{background:#e6f7ff;color:#1890ff}
+.tag-green{background:#f6ffed;color:#52c41a}
+.tag-purple{background:#f9f0ff;color:#722ed1}
+.tag-orange{background:#fff7e6;color:#fa8c16}
+.tag-red{background:#fff1f0;color:#f5222d}
+.time-badge{background:#2d5a1e;color:#fff;font-size:14px;padding:5px 14px;border-radius:14px;margin-bottom:16px;display:inline-block}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.center{text-align:center}
+
+/* 呼吸光效 */
+@keyframes breathe{0%,100%{text-shadow:0 0 20px rgba(45,90,30,0.08)}50%{text-shadow:0 0 40px rgba(45,90,30,0.2)}}
+.breathe{animation:breathe 4s ease-in-out infinite}
+.quote{font-size:26px;font-style:italic;color:#2d5a1e;line-height:1.9;max-width:760px;margin:0 auto}
+.quote-author{margin-top:8px;font-size:16px;color:#999;font-style:normal}
+
+.callout{background:#f0f5ec;padding:18px;border-radius:10px;font-size:17px;color:#444;margin-top:16px;line-height:1.7}
+
+@media(max-width:768px){
+  .slide{padding:40px 24px}
+  h1{font-size:34px}
+  h2{font-size:26px}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .quote{font-size:20px}
+}
+</style>
+</head>
+<body>
+<script>
+document.addEventListener("DOMContentLoaded",function(){
+  var observer=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){e.target.classList.add("visible")}
+    })
+  },{threshold:0.15})
+  document.querySelectorAll(".fade-in").forEach(function(el){observer.observe(el)})
+})
+</script>
+
+<!-- ===== 封面 ===== -->
+<div class="slide center" style="background:linear-gradient(180deg,#f5f8f3 0%,#e8f0e0 100%)">
+<div style="font-size:14px;color:#bbb;margin-bottom:24px;letter-spacing:2px">XENGINEER · 七牛云</div>
+<h1 class="breathe" style="font-size:56px;color:#2d5a1e">ScriptSmith</h1>
+<p style="font-size:18px;color:#999;margin-bottom:36px">AI 小说转剧本工具</p>
+<div class="quote">
+"The writer&rsquo;s vocation is to make the unknown known."
+<div class="quote-author">— André Gide</div>
+</div>
+<p style="font-size:18px;color:#666;max-width:520px;margin:32px auto 0">
+对 ScriptSmith 来说，<strong>小说是已知，剧本是未知</strong>。<br>
+用 AI 完成这趟翻译，让每个故事都能登上舞台。
+</p>
+<div class="row" style="justify-content:center;margin-top:32px">
+<span class="tag tag-blue">React 19</span>
+<span class="tag tag-green">Go + Gin</span>
+<span class="tag tag-purple">DeepSeek API</span>
+<span class="tag tag-orange">PostgreSQL</span>
+</div>
+<p style="margin-top:48px;font-size:16px;color:#bbb">黄晓悦 · 华中农业大学 2023 级 · 人工智能专业</p>
+</div>
+<!-- ===== 产品概念 ===== -->
+<div class="slide">
+<div class="fade-in">
+<h2>产品概念</h2>
+<p style="font-size:20px;margin-bottom:24px">它是一个围绕创作者设计的"创作台"，不是冷冰冰的 AI 生成器。</p>
+<div class="grid grid-2">
+<div class="card">
+<h3>开屏页 · 创作氛围</h3>
+<p>推开大门，是普希金的森林和莎士比亚的头像。纪德的话告诉你：作家的天职是让未知变为已知。这个页面不赶时间，它在说——你到了一个创作空间。</p>
+</div>
+<div class="card">
+<h3>个人主页 · 环岛仪表盘</h3>
+<p>头像居中，字数、作品数、访客数三个指标绕成一圈浮动。12.5 万而不是 125000，点击作品数直接跳转。不是管理后台，是你创作旅程的记录。</p>
+</div>
+<div class="card">
+<h3>编辑器 · 掌控感</h3>
+<p>场景导航、内容块按类型着色、CodeMirror 实时编辑 YAML。支持多种风格改写。从 AI 初稿到你最后的定稿，状态一目了然。</p>
+</div>
+<div class="card">
+<h3>灵感栏目 · 博客形式</h3>
+<p>预设话题 + AI 自动生成创作知识文章。后期用户也可以投稿，成为作家编辑的交流平台。</p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ===== 场景一：小说转剧本 ===== -->
+<div class="slide">
+<div class="fade-in">
+<span class="time-badge">业务场景</span>
+<h2>场景一：小说变成剧本</h2>
+<p style="font-size:20px;margin-bottom:20px">一个作者写了一部小说，想改成剧本——但他不会写剧本格式。</p>
+<div class="grid grid-2">
+<div class="card">
+<h3>难在哪</h3>
+<p>剧本有固定的格式规范——slugline、对白、转场标记。小说的心理描写要变成动作和对话暗示。《百年孤独》改成剧本不必从头抄，但格式转换这件事就拦住了一大半作者。</p>
+</div>
+<div class="card">
+<h3>ScriptSmith 怎么做</h3>
+<p>上传小说 → 选格式（电影/电视剧/舞台剧/动画/短片/网剧/纪录片）和风格（忠实原著/武侠/黑色电影等 11 种）→ 点转换 → 拿到初稿。77 种组合，不同题材用不同风格。</p>
+</div>
+</div>
+<div class="callout">
+<strong>然后呢？</strong>AI 不是黑箱。每处改编都记录了备注——为什么合并两个角色、为什么删掉一段心理描写。作者可以信任，也可以推翻。初稿是你的，决定权也在你。
+</div>
+</div>
+</div>
+
+<!-- ===== 场景二：角色深化 ===== -->
+<div class="slide">
+<div class="fade-in">
+<span class="time-badge">业务场景</span>
+<h2>场景二：让角色有血有肉</h2>
+<p style="font-size:20px;margin-bottom:20px">初稿有了，但人物还不够立体。郭靖长什么样？黄蓉经历了什么？</p>
+<div class="grid grid-2">
+<div class="card">
+<h3>直接的问题</h3>
+<p>初稿里角色只有对白和基本介绍。要让角色"立起来"，需要外貌、性格、背景、完整人生经历。自己写人物小传？很多作者不擅长或者没时间。</p>
+</div>
+<div class="card">
+<h3>产品解法</h3>
+<p>在作品详情页，作者按需点击：<br>
+• 生成角色外貌描述<br>
+• 生成作品级人物小传（长相+性格+背景，批量完成）<br>
+• 生成单个人物生平长文（400-800 字，生平轨迹+性格解析+人物评价）<br>
+• 手动编辑任何字段</p>
+</div>
+</div>
+<div class="callout">
+<strong>为什么要把角色数据拆成字段？</strong>外貌、性格、背景各自独立——作者在编辑器可以单独改外貌不影响性格；导出 YAML 时外貌字段可以被外部工具读取；以后接 AI 生图，外貌字段直接当 prompt；以后给演员开权限，他看到的就是作者打磨好的完整小传。同一份数据，多种消费方式，这就是结构化设计的意义。
+</div>
+</div>
+</div>
+
+<!-- ===== 场景三：多集管理 ===== -->
+<div class="slide">
+<div class="fade-in">
+<span class="time-badge">业务场景</span>
+<h2>场景三：一部作品，多集剧本</h2>
+<p style="font-size:20px;margin-bottom:20px">长篇小说分多集改编——每集独立，但角色设定不能前后打架。</p>
+<div class="grid grid-2">
+<div class="card">
+<h3>多集创作的痛</h3>
+<p>第 1 集郭靖 18 岁，第 5 集他 25 岁了。每集剧本单独存的话，设定需要重复写，翻几集就不知道哪一版是最新的。多集创作最大的痛苦就是维护一致性。</p>
+</div>
+<div class="card">
+<h3>产品怎么做</h3>
+<p>Work（作品）和 Script（剧集）分两层。稳定的属性（性别、性格、背景）存在 Work 层，所有剧集共享。每集自己的状态（年龄、弧光）存在 Script 层，各自独立。后台双向同步——信息更新了自动同步过去。用户完全无感。</p>
+</div>
+</div>
+<div class="callout">
+<strong>体验上：</strong>一次转换就是新的一集，系统自动编号。删除一集其他集自动重排。删作品时级联删除所有相关剧集和任务。用户不用管数据存在哪层，只管创作。
+</div>
+</div>
+</div>
+<!-- ===== 架构提炼 ===== -->
+<div class="slide">
+<div class="fade-in">
+<span class="time-badge">支撑这些场景的设计</span>
+<h2>三个场景背后，三个设计</h2>
+<div class="grid grid-3">
+<div class="card">
+<h3>77 种内容组合</h3>
+<p style="font-size:16px">7 种格式 × 11 种风格。前端枚举、后端 prompt 映射、AI 输出——同一组 key 串联。加一对格式和风格只需要加数据，不改业务代码。</p>
+</div>
+<div class="card">
+<h3>分步深化路径</h3>
+<p style="font-size:16px">转换 → 编辑 → 生成外貌 → 生成小传 → 生成生平 → 导出。每一步独立可选可重复。角色没整理好时 omitempty 保证文件干净体面。</p>
+</div>
+<div class="card">
+<h3>两级存储 + 字段结构化</h3>
+<p style="font-size:16px">Work 层管稳定属性，Script 层管剧集状态。角色字段拆开——编辑器、YAML 导出、未来生图，各取所需。</p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ===== 演示 ===== -->
+<div class="slide">
+<div class="fade-in">
+<span class="time-badge">演示</span>
+<h2>现场走一遍</h2>
+<div class="grid grid-2">
+<div class="card"><h3>1. 封面 → 仪表盘</h3><p>普希金森林、环岛数据、点作品数跳转</p></div>
+<div class="card"><h3>2. 提交小说</h3><p>选格式/风格/Provider，异步转换，进度条动画</p></div>
+<div class="card"><h3>3. 编辑剧本</h3><p>场景导航、内容块编辑、YAML 切换</p></div>
+<div class="card"><h3>4. 作品详情</h3><p>按需生成梗概、外貌、小传、生平</p></div>
+<div class="card"><h3>5. 导出 YAML</h3><p>查看结构化剧本文件</p></div>
+<div class="card"><h3>6. 灵感栏目</h3><p>AI 生成的剧本创作文章</p></div>
+</div>
+</div>
+</div>
+
+<!-- ===== 总结 ===== -->
+<div class="slide center">
+<div class="fade-in">
+<div class="quote" style="font-size:24px">
+"Every writer I know has trouble writing."
+<div class="quote-author" style="font-size:14px">— Joseph Heller</div>
+</div>
+<p style="font-size:18px;color:#666;margin:32px 0 24px">
+ScriptSmith 不会替你把剧本写完。<br>
+但它让"从不会写到写出初稿"这件事，变得没那么难了。
+</p>
+<div class="row" style="justify-content:center;margin-top:12px">
+<span class="tag tag-blue">小说 → 剧本</span>
+<span class="tag tag-green">角色深化</span>
+<span class="tag tag-purple">多集管理</span>
+<span class="tag tag-orange">编辑器打磨</span>
+</div>
+<p style="margin-top:48px;font-size:16px;color:#bbb">黄晓悦 · 华中农业大学 2023 级 · 人工智能专业 · XEngineer 路演</p>
+</div>
+</div>
+
+</body>
+</html>

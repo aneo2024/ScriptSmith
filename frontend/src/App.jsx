@@ -4,7 +4,6 @@ import zhCN from 'antd/locale/zh_CN';
 import AppLayout from './components/Layout';
 import AuthGuard from './components/AuthGuard';
 import DashboardPage from './pages/DashboardPage';
-import NovelInputPage from './pages/NovelInputPage';
 import EditorPage from './pages/EditorPage';
 import WorkListPage from './pages/WorkListPage';
 import WorkDetailPage from './pages/WorkDetailPage';
@@ -38,7 +37,6 @@ function AppRoutes() {
                 <Route path="/editor" element={<EditorPage />} />
                 <Route path="/inspiration" element={<InspirationPage />} />
                 <Route path="/inspiration/article/:id" element={<ArticleDetailPage />} />
-                <Route path="/novel-input" element={<NovelInputPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="*" element={<WorkListPage />} />
               </Routes>

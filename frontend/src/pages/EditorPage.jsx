@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Spin, Button, Typography, App, Select, Space } from 'antd';
 import { ArrowLeftOutlined, DownloadOutlined, SwapOutlined, FileTextOutlined, DeleteOutlined } from '@ant-design/icons';
 import SceneNav from '../components/SceneNav';
 import SceneCard from '../components/SceneCard';
+import AdaptationNotes from '../components/AdaptationNotes';
 import useScriptStore from '../store/scriptStore';
 import { useTask } from '../hooks/useTask';
 import api, { getScriptByTaskId, exportScriptYAML } from '../services/api';
@@ -35,6 +36,86 @@ function SceneCanvas() {
   );
 }
 
+function AdaptationNotesButton({ notes, onClick }) {
+  return (
+    <Button icon={<FileTextOutlined />} onClick={onClick}>
+      改编备注 {notes.length > 0 && `(${notes.length})`}
+    </Button>
+  );
+}
+
+function FloatingNotesPanel({ notes, onClose }) {
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const dragging = useRef(false);
+  const startPos = useRef({ x: 0, y: 0 });
+  const panelRef = useRef(null);
+
+  const onMouseDown = useCallback((e) => {
+    dragging.current = true;
+    startPos.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+    e.preventDefault();
+  }, [pos]);
+
+  useEffect(() => {
+    const onMouseMove = (e) => {
+      if (!dragging.current) return;
+      setPos({
+        x: e.clientX - startPos.current.x,
+        y: e.clientY - startPos.current.y,
+      });
+    };
+    const onMouseUp = () => { dragging.current = false; };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={panelRef}
+      style={{
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        width: 380,
+        maxHeight: 'calc(100% - 32px)',
+        overflow: 'hidden',
+        background: 'rgba(255,255,255,0.7)',
+        borderRadius: 12,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06)',
+        zIndex: 10,
+        padding: '12px 16px 16px',
+        border: '1px solid rgba(0,0,0,0.04)',
+        transform: `translate(${pos.x}px, ${pos.y}px)`,
+        transition: dragging.current ? 'none' : undefined,
+      }}
+    >
+      <div
+        onMouseDown={onMouseDown}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 12,
+          paddingBottom: 8,
+          borderBottom: '1px solid #f0f0f0',
+          cursor: 'grab',
+          userSelect: 'none',
+        }}
+      >
+        <span style={{ fontWeight: 600, fontSize: 15 }}>改编备注</span>
+        <Button size="small" type="text" onClick={onClose} style={{ fontSize: 14, color: '#999', lineHeight: 1 }}>✕</Button>
+      </div>
+      <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+        <AdaptationNotes notes={notes} />
+      </div>
+    </div>
+  );
+}
+
 export default function EditorPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -48,6 +129,8 @@ export default function EditorPage() {
   const setScript = useScriptStore((s) => s.setScript);
   const script = useScriptStore((s) => s.script);
   const { reset } = useTask();
+
+  const [notesPanelOpen, setNotesPanelOpen] = useState(false);
 
   // 剧集列表（当 workId 存在时加载）
   const [episodes, setEpisodes] = useState([]);
@@ -197,6 +280,10 @@ export default function EditorPage() {
               <Button icon={<DownloadOutlined />} onClick={handleExport}>
                 导出 YAML
               </Button>
+              <AdaptationNotesButton
+                notes={script.adaptation_notes || []}
+                onClick={() => setNotesPanelOpen(true)}
+              />
               <Button
                 danger
                 icon={<DeleteOutlined />}
@@ -215,7 +302,13 @@ export default function EditorPage() {
           <Spin size="large" tip="加载剧本中..." />
         </div>
       ) : (
-        <div className="script-editor">
+        <div className="script-editor" style={{ position: 'relative' }}>
+          {script && notesPanelOpen && (
+            <FloatingNotesPanel
+              notes={script.adaptation_notes || []}
+              onClose={() => setNotesPanelOpen(false)}
+            />
+          )}
           <SceneNav />
           <SceneCanvas />
         </div>

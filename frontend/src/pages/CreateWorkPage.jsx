@@ -12,6 +12,7 @@ import {
   Tag,
   Space,
   Alert,
+  Switch,
 } from 'antd';
 import {
   UploadOutlined,
@@ -49,6 +50,7 @@ export default function CreateWorkPage() {
   const [uploading, setUploading] = useState(false);
   const [format, setFormat] = useState(DEFAULT_FORMAT);
   const [style, setStyle] = useState(DEFAULT_STYLE);
+  const [includeNotes, setIncludeNotes] = useState(false);
   const [saving, setSaving] = useState(false);
   const [existingWork, setExistingWork] = useState(null);
   const [characters, setCharacters] = useState([]);
@@ -123,7 +125,7 @@ export default function CreateWorkPage() {
     try {
       const validCharacters = characters.filter((c) => c.name.trim());
       if (existingWorkId) {
-        await submit(novelText, format, style, existingWorkId);
+        await submit(novelText, format, style, existingWorkId, undefined, includeNotes);
       } else {
         const work = await createWork({
           title: workTitle,
@@ -136,7 +138,7 @@ export default function CreateWorkPage() {
           supporting_chars: [],
           word_count: novelText.length,
         });
-        await submit(novelText, format, style, work.id);
+        await submit(novelText, format, style, work.id, undefined, includeNotes);
       }
     } catch (err) {
       message.error('操作失败: ' + (err.response?.data?.error || err.message));
@@ -300,6 +302,20 @@ export default function CreateWorkPage() {
           {!isExistingWork && <Divider style={{ margin: '0' }} />}
 
           <div>
+            <Text strong>影视类型</Text>
+            <Select
+              value={format}
+              onChange={setFormat}
+              options={formatOptions}
+              size="large"
+              disabled={isPolling}
+              style={{ width: '100%', marginTop: 8 }}
+            />
+          </div>
+
+          <Divider style={{ margin: '0' }} />
+
+          <div>
             <Text strong>改编风格</Text>
             <Select
               value={style}
@@ -309,6 +325,18 @@ export default function CreateWorkPage() {
               disabled={isPolling}
               style={{ width: '100%', marginTop: 8 }}
             />
+          </div>
+
+          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Switch
+              checked={includeNotes}
+              onChange={setIncludeNotes}
+              disabled={isPolling}
+              size="small"
+            />
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              记录改编备注（增加 token 消耗）
+            </Text>
           </div>
 
           <Divider style={{ margin: '0' }} />

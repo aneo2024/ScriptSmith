@@ -54,7 +54,7 @@ export function TaskProvider({ children }) {
   }, [phase, clearPolling]);
 
   const submit = useCallback(
-    async (novelText, format, style, workId, providerId) => {
+    async (novelText, format, style, workId, providerId, includeNotes) => {
       if (phase !== 'idle' && phase !== 'completed' && phase !== 'failed') {
         return;
       }
@@ -62,7 +62,7 @@ export function TaskProvider({ children }) {
       setPhase('submitting');
 
       try {
-        const result = await convertNovel(novelText, format, style, workId, providerId);
+        const result = await convertNovel(novelText, format, style, workId, providerId, includeNotes);
         setTaskId(result.task_id);
         setBackendStatus(result.status);
         setBackendProgress(result.progress || 0);

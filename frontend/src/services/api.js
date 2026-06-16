@@ -119,13 +119,14 @@ export default api;
 
 // ============ 接口方法 ============
 
-export const convertNovel = (novelText, format, style, workId, providerId) =>
+export const convertNovel = (novelText, format, style, workId, providerId, includeNotes) =>
   api.post('/convert', {
     novel_text: novelText,
     format,
     style,
     work_id: workId,
     provider_id: providerId,
+    include_notes: includeNotes,
   }).then((r) => r.data);
 
 export const getTaskStatus = (taskId) =>

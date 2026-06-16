@@ -163,19 +163,19 @@ func (c *Client) convertNovel(cfg ProviderConfig, novelText, format, style strin
 }
 
 // ConvertNovelToStructured 使用默认 provider 生成结构化 JSON 剧本
-func (c *Client) ConvertNovelToStructured(novelText, format, style string) (*model.Script, error) {
-	return c.convertNovelToStructured(c.defaultConfig, novelText, format, style)
+func (c *Client) ConvertNovelToStructured(novelText, format, style string, includeNotes bool) (*model.Script, error) {
+	return c.convertNovelToStructured(c.defaultConfig, novelText, format, style, includeNotes)
 }
 
 // ConvertNovelToStructuredWithConfig 使用指定 provider
-func (c *Client) ConvertNovelToStructuredWithConfig(cfg ProviderConfig, novelText, format, style string) (*model.Script, error) {
-	return c.convertNovelToStructured(cfg, novelText, format, style)
+func (c *Client) ConvertNovelToStructuredWithConfig(cfg ProviderConfig, novelText, format, style string, includeNotes bool) (*model.Script, error) {
+	return c.convertNovelToStructured(cfg, novelText, format, style, includeNotes)
 }
 
-func (c *Client) convertNovelToStructured(cfg ProviderConfig, novelText, format, style string) (*model.Script, error) {
+func (c *Client) convertNovelToStructured(cfg ProviderConfig, novelText, format, style string, includeNotes bool) (*model.Script, error) {
 	content, err := c.chat(cfg,
 		"你是一位专业编剧，擅长将小说改编为剧本。只输出 JSON 格式的剧本数据，不要任何解释。",
-		buildStructuredPrompt(novelText, format, style))
+		buildStructuredPrompt(novelText, format, style, includeNotes))
 	if err != nil {
 		return nil, err
 	}
@@ -489,7 +489,7 @@ func truncate(s string, maxLen int) string {
 
 // buildStructuredPrompt 构建结构化 JSON 输出的 Prompt
 // 注：format/style 的 key 与默认值（"film"/"faithful"）必须与前端 utils/scriptOptions.js 保持一致
-func buildStructuredPrompt(novelText, format, style string) string {
+func buildStructuredPrompt(novelText, format, style string, includeNotes bool) string {
 	if format == "" {
 		format = "film"
 	}
@@ -528,6 +528,22 @@ func buildStructuredPrompt(novelText, format, style string) string {
 		styleLabel = style
 	}
 
+	// 构建第6条要求（改编备注开关）
+	reqNotes := ""
+	schemaNotes := ""
+	if includeNotes {
+		reqNotes = "\n6. 在 adaptation_notes 中记录所有改编决策：合并了哪些角色、删/改了什么内容、为什么这样改（至少 1-3 条）"
+		schemaNotes = `
+  "adaptation_notes": [
+    {
+      "chapter": "原著中的章节/段落标识",
+      "scene_ids": ["关联的场景ID"],
+      "changes": "具体做了什么改动",
+      "reason": "为什么这样改"
+    }
+  ],`
+	}
+
 	return fmt.Sprintf(`将以下小说改编为剧本，以 JSON 格式输出。
 
 改编配置：
@@ -539,8 +555,8 @@ func buildStructuredPrompt(novelText, format, style string) string {
 2. 删除纯心理描写，转为动作或对话暗示
 3. 合并功能重复的次要角色
 4. 每场景聚焦一个戏剧冲突点
-5. 对话口语化，有潜台词
-6. 用 json 代码块（三个反引号包裹）输出，不含任何其他解释
+5. 对话口语化，有潜台词%s
+7. 用 json 代码块（三个反引号包裹）输出，不含任何其他解释
 
 JSON 结构体（严格按此结构输出）：
 {
@@ -614,11 +630,11 @@ JSON 结构体（严格按此结构输出）：
       "mood": "场景氛围",
       "notes": "场景备注"
     }
-  ],
+  ],%s
   "yaml": "",
   "version": 1
 }
 
 小说文本：
-%s`, formatLabel, styleLabel, novelText)
+%s`, formatLabel, styleLabel, reqNotes, schemaNotes, novelText)
 }

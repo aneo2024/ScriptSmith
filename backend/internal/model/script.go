@@ -15,8 +15,9 @@ type Script struct {
 	Summary    string         `json:"summary"`                      // 剧本摘要
 	Metadata   datatypes.JSON `gorm:"type:json" json:"metadata"`     // {title, original_title, format, genre}
 	Characters datatypes.JSON `gorm:"type:json" json:"characters"`   // [{id, name, type, description}]
-	Scenes     datatypes.JSON `gorm:"type:json" json:"scenes"`       // [{id, sequence, slugline, content}]
-	YAML       string         `gorm:"type:text" json:"yaml"`         // 实时生成的 YAML
+	Scenes          datatypes.JSON `gorm:"type:json" json:"scenes"`            // [{id, sequence, slugline, content}]
+	AdaptationNotes datatypes.JSON `gorm:"type:json" json:"adaptation_notes"` // [{chapter, scene_ids, changes, reason}]
+	YAML            string         `gorm:"type:text" json:"yaml"`              // 实时生成的 YAML
 	Version    int            `json:"version"`
 	CreatedAt  time.Time      `json:"created_at"`
 	UpdatedAt  time.Time      `json:"updated_at"`

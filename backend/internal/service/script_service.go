@@ -37,7 +37,7 @@ func NewScriptService(
 }
 
 // ConvertNovel 创建任务（pending）并立即返回 task_id；启动 goroutine 后台调 AI。
-func (s *ScriptService) ConvertNovel(novelText, format, style, userID, workID, providerID string) (*model.Task, error) {
+func (s *ScriptService) ConvertNovel(novelText, format, style, userID, workID, providerID string, includeNotes bool) (*model.Task, error) {
 	if novelText == "" {
 		return nil, fmt.Errorf("novel_text 不能为空")
 	}
@@ -62,7 +62,7 @@ func (s *ScriptService) ConvertNovel(novelText, format, style, userID, workID, p
 		return nil, fmt.Errorf("创建任务失败: %w", err)
 	}
 
-	go s.processInBackground(task.ID, workID, providerID)
+	go s.processInBackground(task.ID, workID, providerID, includeNotes)
 
 	return task, nil
 }
@@ -168,7 +168,7 @@ func (s *ScriptService) resolveProvider(providerID, userID string) (ai.ProviderC
 }
 
 // processInBackground 后台处理：分阶段调用 AI 生成剧本
-func (s *ScriptService) processInBackground(taskID, workID, providerID string) {
+func (s *ScriptService) processInBackground(taskID, workID, providerID string, includeNotes bool) {
 	defer func() {
 		if r := recover(); r != nil {
 			_ = s.taskRepo.UpdateStatus(taskID, "failed", 0, "", fmt.Sprintf("后台处理异常: %v", r), "任务异常，已中止")
@@ -204,10 +204,10 @@ func (s *ScriptService) processInBackground(taskID, workID, providerID string) {
 	var script *model.Script
 	if cfg.APIKey != "" && cfg.Name != "system-default" {
 		log.Printf("[task %s] 使用自定义 provider: %s (%s)", taskID, cfg.Name, cfg.Model)
-		script, err = s.aiClient.ConvertNovelToStructuredWithConfig(cfg, task.NovelText, task.Format, task.Style)
+		script, err = s.aiClient.ConvertNovelToStructuredWithConfig(cfg, task.NovelText, task.Format, task.Style, includeNotes)
 	} else {
 		log.Printf("[task %s] 使用系统默认 provider", taskID)
-		script, err = s.aiClient.ConvertNovelToStructured(task.NovelText, task.Format, task.Style)
+		script, err = s.aiClient.ConvertNovelToStructured(task.NovelText, task.Format, task.Style, includeNotes)
 	}
 	if err != nil {
 		_ = s.taskRepo.UpdateStatus(taskID, "failed", 0, "", err.Error(), "AI 调用失败")
@@ -284,7 +284,7 @@ func (s *ScriptService) CancelTask(taskID, userID, role string) error {
 
 // CreateFromAI 调用 AI 生成结构化剧本并存入数据库
 func (s *ScriptService) CreateFromAI(taskID, novelText string) (*model.Script, error) {
-	script, err := s.aiClient.ConvertNovelToStructured(novelText, "film", "realistic")
+	script, err := s.aiClient.ConvertNovelToStructured(novelText, "film", "realistic", false)
 	if err != nil {
 		return nil, fmt.Errorf("AI 转换失败: %w", err)
 	}

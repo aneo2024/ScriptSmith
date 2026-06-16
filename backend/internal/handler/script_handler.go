@@ -17,11 +17,12 @@ func NewScriptHandler(svc *service.ScriptService) *ScriptHandler {
 }
 
 type ConvertRequest struct {
-	NovelText  string `json:"novel_text" binding:"required"`
-	Format     string `json:"format"`
-	Style      string `json:"style"`
-	WorkID     string `json:"work_id"`
-	ProviderID string `json:"provider_id"` // 可选：选择用户配置的 AI provider
+	NovelText    string `json:"novel_text" binding:"required"`
+	Format       string `json:"format"`
+	Style        string `json:"style"`
+	WorkID       string `json:"work_id"`
+	ProviderID   string `json:"provider_id"`
+	IncludeNotes bool   `json:"include_notes"` // 是否生成改编备注
 }
 
 // Convert 提交小说，返回任务ID（立即返回，后台异步调 AI）
@@ -33,7 +34,7 @@ func (h *ScriptHandler) Convert(c *gin.Context) {
 		return
 	}
 	userID := c.GetString("userID")
-	task, err := h.svc.ConvertNovel(req.NovelText, req.Format, req.Style, userID, req.WorkID, req.ProviderID)
+	task, err := h.svc.ConvertNovel(req.NovelText, req.Format, req.Style, userID, req.WorkID, req.ProviderID, req.IncludeNotes)
 	if err != nil {
 		ErrorInternal(c, err.Error())
 		return
