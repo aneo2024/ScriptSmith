@@ -349,6 +349,60 @@ func (c *Client) generateWorkCharacterProfiles(cfg ProviderConfig, charactersJSO
 	return results, nil
 }
 
+// ============================ 单个人物小传/生平生成 ============================
+
+// GenerateCharacterBiography 使用默认 provider 为单个人物生成完整的生平/评价长文
+func (c *Client) GenerateCharacterBiography(name, gender, appearance, personality, background, synopsis string) (string, error) {
+	return c.generateCharacterBiography(c.defaultConfig, name, gender, appearance, personality, background, synopsis)
+}
+
+// GenerateCharacterBiographyWithConfig 使用指定 provider
+func (c *Client) GenerateCharacterBiographyWithConfig(cfg ProviderConfig, name, gender, appearance, personality, background, synopsis string) (string, error) {
+	return c.generateCharacterBiography(cfg, name, gender, appearance, personality, background, synopsis)
+}
+
+func (c *Client) generateCharacterBiography(cfg ProviderConfig, name, gender, appearance, personality, background, synopsis string) (string, error) {
+	systemPrompt := `你是一位资深的人物传记作家，擅长为剧本角色撰写深度的人物生平总结与评价。
+请直接输出 Markdown 格式的传记正文，不要任何开场白或额外说明。`
+
+	parts := []string{}
+	if name != "" {
+		parts = append(parts, "姓名："+name)
+	}
+	if gender != "" {
+		parts = append(parts, "性别："+gender)
+	}
+	if appearance != "" {
+		parts = append(parts, "外貌："+appearance)
+	}
+	if personality != "" {
+		parts = append(parts, "性格："+personality)
+	}
+	if background != "" {
+		parts = append(parts, "背景："+background)
+	}
+	parts = append(parts, "剧情梗概："+synopsis)
+	basicInfo := strings.Join(parts, "\n")
+
+	userPrompt := fmt.Sprintf(`请根据以下已知信息，为「%s」撰写一篇 400-800 字的 Markdown 格式人物小传（生平总结 + 人物评价）。
+
+已知信息：
+%s
+
+要求：
+1. 第一段为「生平轨迹」，介绍角色的出身、成长、关键经历。
+2. 第二段为「性格解析」，结合已有性格特征深入分析。
+3. 第三段为「人物评价」，给出客观中肯的总结评价，可指出其优缺点、典型行为、象征意义。
+4. 用「## 生平轨迹」「## 性格解析」「## 人物评价」作为小标题。
+5. 语言风格：凝练、有文学性、避免空洞的赞美。`, name, basicInfo)
+
+	content, err := c.chat(cfg, systemPrompt, userPrompt)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(content), nil
+}
+
 // ============================ Prompt 与 JSON 抽取 ============================
 
 func buildPrompt(novelText, format, style string) string {

@@ -9,6 +9,7 @@ import EditorPage from './pages/EditorPage';
 import WorkListPage from './pages/WorkListPage';
 import WorkDetailPage from './pages/WorkDetailPage';
 import CreateWorkPage from './pages/CreateWorkPage';
+import CharacterProfilePage from './pages/CharacterProfilePage';
 import InspirationPage from './pages/InspirationPage';
 import ArticleDetailPage from './pages/ArticleDetailPage';
 import SettingsPage from './pages/SettingsPage';
@@ -32,6 +33,7 @@ function AppRoutes() {
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/works" element={<WorkListPage />} />
                 <Route path="/works/:id" element={<WorkDetailPage />} />
+                <Route path="/works/:id/character/:index" element={<CharacterProfilePage />} />
                 <Route path="/create-work" element={<CreateWorkPage />} />
                 <Route path="/editor" element={<EditorPage />} />
                 <Route path="/inspiration" element={<InspirationPage />} />

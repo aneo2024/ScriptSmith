@@ -51,6 +51,7 @@ export default function EditorPage() {
 
   // 剧集列表（当 workId 存在时加载）
   const [episodes, setEpisodes] = useState([]);
+  const [activeEpisodeId, setActiveEpisodeId] = useState(scriptId);
 
   useEffect(() => {
     if (scriptId) {
@@ -110,6 +111,7 @@ export default function EditorPage() {
   };
 
   const handleSwitchEpisode = (epId) => {
+    setActiveEpisodeId(epId);
     loadScript(epId);
     // 更新 URL 不刷新页面
     const params = new URLSearchParams();
@@ -171,7 +173,7 @@ export default function EditorPage() {
           {/* 剧集切换器 */}
           {episodes.length > 1 && (
             <Select
-              value={scriptId}
+              value={activeEpisodeId || script?.id || scriptId}
               onChange={handleSwitchEpisode}
               style={{ width: 150 }}
               placeholder="切换剧集"

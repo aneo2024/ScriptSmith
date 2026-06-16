@@ -1,0 +1,4 @@
+2026/06/16 18:34:40 数据库已就绪 (type=sqlite)
+2026/06/16 18:34:40 服务启动在 :8080
+[GIN-debug] [ERROR] listen tcp :8080: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+2026/06/16 18:34:40 启动服务失败: listen tcp :8080: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.

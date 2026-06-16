@@ -38,7 +38,7 @@ func (r *ScriptRepository) GetByTaskID(taskID string) (*model.Script, error) {
 
 func (r *ScriptRepository) ListByWorkID(workID string) ([]model.Script, error) {
 	var scripts []model.Script
-	err := r.db.Where("work_id = ?", workID).Order("episode ASC").Find(&scripts).Error
+	err := r.db.Where("work_id = ?", workID).Order("created_at ASC").Find(&scripts).Error
 	if err != nil {
 		return nil, err
 	}
