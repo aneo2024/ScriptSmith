@@ -38,3 +38,11 @@ export const deleteScript = (scriptId) =>
 
 export const generateCharacterProfiles = (workId) =>
   api.post(`/works/${workId}/characters/profiles`, {}, { timeout: 60000 }).then((r) => r.data);
+
+// AI 生成单个人物的生平/评价长文
+export const generateCharacterBiography = (workId, index) =>
+  api.post(`/works/${workId}/characters/${index}/biography`, {}, { timeout: 60000 }).then((r) => r.data);
+
+// 手动更新单个人物小传（性格/外貌/背景/生平）
+export const updateCharacterProfile = (workId, index, data) =>
+  api.put(`/works/${workId}/characters/${index}`, data).then((r) => r.data);

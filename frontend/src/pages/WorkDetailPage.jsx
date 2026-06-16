@@ -75,7 +75,6 @@ const characterColumns = [
     title: '类型',
     dataIndex: 'type',
     key: 'type',
-    width: 100,
     filters: Object.entries(characterTypeLabel).map(([value, label]) => ({
       text: label,
       value,
@@ -86,14 +85,6 @@ const characterColumns = [
         {characterTypeLabel[type] || type}
       </Tag>
     ),
-  },
-  { title: '简介', dataIndex: 'description', key: 'description', ellipsis: true },
-  {
-    title: '外貌',
-    dataIndex: 'appearance',
-    key: 'appearance',
-    ellipsis: true,
-    render: (text) => text ? <Text style={{ fontSize: 13, color: '#666' }}>{text}</Text> : <Text type="secondary">-</Text>,
   },
 ];
 
@@ -597,37 +588,37 @@ export default function WorkDetailPage() {
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate(`/create-work?workId=${id}`)}>
           生成新剧集
         </Button>
-        <Text type="secondary" style={{ fontSize: 13, alignSelf: 'center' }}>
-          点击剧集标签旁的 <EditOutlined /> 图标即可编辑对应集
+        <Button
+          icon={<EditOutlined />}
+          onClick={() => navigate(`/editor?scriptId=${activeScriptId}&workId=${id}`)}
+        >
+          编辑当前剧集
+        </Button>
+        <Text type="secondary" style={{ fontSize: 13 }}>
+          当前：{activeScript?.title || `第${activeScript?.episode || '?'}集`}
         </Text>
       </div>
 
       <Card bordered={false}>
-        <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
+        <Tabs activeKey={activeTab} onChange={setActiveTab} destroyInactiveTabPane items={[
           {
             key: 'summary',
             label: <span><ReadOutlined /> 剧集梗概</span>,
             children: (
               <div>
-                <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ marginBottom: 16 }}>
                   <Text strong>选择剧集：</Text>
+                  {' '}
                   <Select
                     style={{ width: 200 }}
                     value={activeScriptId}
                     onChange={setActiveScriptId}
                     options={episodeSelectOptions}
                   />
-                  <Button
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => navigate(`/editor?scriptId=${activeScriptId}&workId=${id}`)}
-                  >
-                    编辑此集
-                  </Button>
                 </div>
                 {activeScript ? renderEpisodeSummary(activeScript) : <Empty description="请选择剧集" />}
               </div>
@@ -638,21 +629,15 @@ export default function WorkDetailPage() {
             label: <span><UnorderedListOutlined /> 场景列表</span>,
             children: (
               <div>
-                <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ marginBottom: 16 }}>
                   <Text strong>选择剧集：</Text>
+                  {' '}
                   <Select
                     style={{ width: 200 }}
                     value={activeScriptId}
                     onChange={setActiveScriptId}
                     options={episodeSelectOptions}
                   />
-                  <Button
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => navigate(`/editor?scriptId=${activeScriptId}&workId=${id}`)}
-                  >
-                    编辑此集
-                  </Button>
                 </div>
                 {activeScript ? renderEpisodeScenes(activeScript) : <Empty description="请选择剧集" />}
               </div>
@@ -663,21 +648,15 @@ export default function WorkDetailPage() {
             label: <span><TeamOutlined /> 角色管理</span>,
             children: (
               <div>
-                <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ marginBottom: 16 }}>
                   <Text strong>选择剧集：</Text>
+                  {' '}
                   <Select
                     style={{ width: 200 }}
                     value={activeScriptId}
                     onChange={setActiveScriptId}
                     options={episodeSelectOptions}
                   />
-                  <Button
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => navigate(`/editor?scriptId=${activeScriptId}&workId=${id}`)}
-                  >
-                    编辑此集
-                  </Button>
                 </div>
                 {activeScript ? (() => {
                   let chars = [];
@@ -689,25 +668,42 @@ export default function WorkDetailPage() {
                     }
                   } catch { /* parse failed */ }
                   return chars.length > 0 ? (
-                    <>
-                      <div style={{ marginBottom: 16 }}>
-                        <Button
-                          size="small"
-                          icon={generatingAppearances.has(activeScript.id) ? <LoadingOutlined /> : <SkinOutlined />}
-                          loading={generatingAppearances.has(activeScript.id)}
-                          onClick={() => handleGenerateAppearances(activeScript.id)}
-                        >
-                          生成本集角色外貌
-                        </Button>
-                      </div>
-                      <Table
+                     <>
+                       <div style={{ marginBottom: 16 }}>
+                         <Button
+                           size="small"
+                           icon={generatingAppearances.has(activeScript.id) ? <LoadingOutlined /> : <SkinOutlined />}
+                           loading={generatingAppearances.has(activeScript.id)}
+                           onClick={() => handleGenerateAppearances(activeScript.id)}
+                         >
+                           生成本集角色外貌
+                         </Button>
+                       </div>
+                       <Table
                         dataSource={chars.map((c, i) => ({ ...c, key: c.id || i }))}
                         columns={characterColumns}
                         pagination={false}
                         size="middle"
                         locale={{ emptyText: '暂无角色' }}
+                        expandable={{
+                          expandedRowRender: (record) => (
+                            <div style={{ padding: '8px 0' }}>
+                              {record.description && (
+                                <Paragraph style={{ marginBottom: 8 }}>
+                                  <Text strong>简介：</Text>{record.description}
+                                </Paragraph>
+                              )}
+                              {record.appearance && (
+                                <Paragraph style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                                  <Text strong>外貌：</Text><Text style={{ userSelect: 'text' }}>{record.appearance}</Text>
+                                </Paragraph>
+                              )}
+                            </div>
+                          ),
+                          rowExpandable: () => true,
+                        }}
                       />
-                    </>
+                     </>
                   ) : <Empty description="本集暂无角色数据" />;
                 })() : <Empty description="请选择剧集" />}
               </div>
@@ -733,7 +729,12 @@ export default function WorkDetailPage() {
                     <Row gutter={[16, 16]}>
                       {workCharProfiles.map((char, i) => (
                         <Col xs={24} sm={12} key={i}>
-                          <Card style={{ background: '#fafafa' }}>
+                          <Card
+                            hoverable
+                            onClick={() => navigate(`/works/${id}/character/${i}`)}
+                            style={{ background: '#fafafa' }}
+                            styles={{ body: { padding: 16 } }}
+                          >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                               <div style={{
                                 width: 44, height: 44, borderRadius: '50%',
@@ -743,11 +744,11 @@ export default function WorkDetailPage() {
                               }}>
                                 {char.name?.[0]}
                               </div>
-                              <div>
+                              <div style={{ flex: 1 }}>
                                 <Text strong style={{ fontSize: 15 }}>{char.name}</Text>
                                 <div>
-                                  {char.age && <Tag>{char.age}{char.age.includes('岁') ? '' : '岁'}</Tag>}
                                   {char.gender && <Tag>{char.gender}</Tag>}
+                                  {char.biography && <Tag color="green">已有传记</Tag>}
                                 </div>
                               </div>
                             </div>
@@ -766,6 +767,11 @@ export default function WorkDetailPage() {
                                 <Text strong>背景：</Text>{char.background}
                               </Paragraph>
                             )}
+                            <div style={{ marginTop: 10, textAlign: 'right' }}>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                点击查看 / 编辑 →
+                              </Text>
+                            </div>
                           </Card>
                         </Col>
                       ))}

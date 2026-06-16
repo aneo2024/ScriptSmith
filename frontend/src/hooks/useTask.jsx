@@ -36,6 +36,10 @@ export function TaskProvider({ children }) {
   }, []);
 
   const reset = useCallback(() => {
+    // 如果有正在进行的任务，不允许 reset，以免切换页面时丢失进度
+    if (phase === 'polling' || phase === 'submitting') {
+      return;
+    }
     clearPolling();
     setPhase('idle');
     setTaskId(null);
@@ -47,7 +51,7 @@ export function TaskProvider({ children }) {
     setYaml('');
     setError('');
     submitAtRef.current = null;
-  }, [clearPolling]);
+  }, [phase, clearPolling]);
 
   const submit = useCallback(
     async (novelText, format, style, workId, providerId) => {
@@ -140,8 +144,11 @@ export function TaskProvider({ children }) {
       }
     };
 
-    poll();
-    pollingRef.current = setInterval(poll, POLL_INTERVAL);
+    // 如果定时器已存在（页面切换后重新挂载），不重复创建
+    if (!pollingRef.current) {
+      poll();
+      pollingRef.current = setInterval(poll, POLL_INTERVAL);
+    }
 
     return () => {
       if (pollingRef.current) {
@@ -182,11 +189,6 @@ export function TaskProvider({ children }) {
       }
     };
   }, [phase, backendProgress]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => clearPolling();
-  }, [clearPolling]);
 
   const value = {
     taskId,

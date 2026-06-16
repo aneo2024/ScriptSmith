@@ -224,23 +224,29 @@ export default function WorkListPage() {
                             {work.synopsis}
                           </Paragraph>
                         )}
-                        <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#888' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {mainChar && (
-                            <span>
-                              <UserOutlined style={{ marginRight: 4 }} />
-                              {mainChar.name}
-                              {mainChar.age && ` ${mainChar.age}`}
-                              {mainChar.gender && `·${mainChar.gender}`}
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ display: 'flex', alignItems: 'center', fontSize: 13, color: '#666' }}>
+                                <UserOutlined style={{ marginRight: 4, fontSize: 12 }} />
+                                {mainChar.name}
+                              </span>
+                              <Space size={4}>
+                                {mainChar.age && <Tag size="small" color="blue">{mainChar.age}{mainChar.age.includes('岁') ? '' : '岁'}</Tag>}
+                                {mainChar.gender && <Tag size="small" color="purple">{mainChar.gender}</Tag>}
+                              </Space>
+                            </div>
                           )}
-                          <span>
-                            <FileTextOutlined style={{ marginRight: 4 }} />
-                            {formatWordCount(work.word_count)}字
-                          </span>
-                          <span>
-                            <ClockCircleOutlined style={{ marginRight: 4 }} />
-                            {new Date(work.created_at).toLocaleDateString('zh-CN')}
-                          </span>
+                          <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#888' }}>
+                            <span>
+                              <FileTextOutlined style={{ marginRight: 4 }} />
+                              {formatWordCount(work.word_count)}字
+                            </span>
+                            <span>
+                              <ClockCircleOutlined style={{ marginRight: 4 }} />
+                              {new Date(work.created_at).toLocaleDateString('zh-CN')}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     }

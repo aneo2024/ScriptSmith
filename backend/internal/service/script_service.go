@@ -7,6 +7,7 @@ import (
 	"scriptsmith/internal/ai"
 	"scriptsmith/internal/model"
 	"scriptsmith/internal/repository"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -219,7 +220,14 @@ func (s *ScriptService) processInBackground(taskID, workID, providerID string) {
 		log.Printf("[task %s] 更新 processing 状态失败: %v", taskID, err)
 	}
 
-	// 4. 填充元信息后写库
+	// 4. 同步角色信息（双向：保持一致性 + 逐步完善设定）
+	if workID != "" {
+		if err := s.syncCharacters(script, workID); err != nil {
+			log.Printf("[task %s] 同步角色信息失败: %v", taskID, err)
+		}
+	}
+
+	// 5. 填充元信息后写库
 	script.ID = uuid.New().String()
 	script.TaskID = taskID
 	if workID != "" {
@@ -351,5 +359,130 @@ func (s *ScriptService) DeleteScript(scriptID, userID string) error {
 		}
 	}
 
-	return s.scriptRepo.Delete(scriptID)
+	// 记录关联作品 ID（如果有），用于后续重新编号
+	var workID string
+	if script.WorkID != nil {
+		workID = *script.WorkID
+	}
+
+	// 删除剧本
+	if err := s.scriptRepo.Delete(scriptID); err != nil {
+		return err
+	}
+
+	// 如果关联了作品，重新编号剩余剧集
+	if workID != "" {
+		if err := s.reorderEpisodes(workID); err != nil {
+			log.Printf("重新编号剧集失败 (work=%s): %v", workID, err)
+		}
+	}
+
+	return nil
+}
+
+// reorderEpisodes 重新编号作品下的所有剧集
+func (s *ScriptService) reorderEpisodes(workID string) error {
+	scripts, err := s.scriptRepo.ListByWorkID(workID)
+	if err != nil {
+		return err
+	}
+
+	if len(scripts) == 0 {
+		return nil
+	}
+
+	// 按创建时间排序，保持原有顺序
+	for i, script := range scripts {
+		newEpisode := i + 1
+		if script.Episode != newEpisode {
+			script.Episode = newEpisode
+			if err := s.scriptRepo.Update(&script); err != nil {
+				log.Printf("更新剧集编号失败 (script=%s): %v", script.ID, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// syncCharacters 双向同步角色信息
+// 注意：只同步稳定的基础信息（性别、性格、背景），不同步年龄和外貌
+// 因为年龄会随剧情时间线变化，外貌可能因剧情发展而变化
+func (s *ScriptService) syncCharacters(script *model.Script, workID string) error {
+	work, err := s.workRepo.Get(workID)
+	if err != nil {
+		return fmt.Errorf("获取作品失败: %w", err)
+	}
+
+	var profiles []model.CharacterProfile
+	if len(work.CharacterProfiles) > 0 {
+		if err := json.Unmarshal(work.CharacterProfiles, &profiles); err != nil {
+			return fmt.Errorf("解析角色设定失败: %w", err)
+		}
+	}
+
+	var chars []model.Character
+	if len(script.Characters) > 0 {
+		if err := json.Unmarshal(script.Characters, &chars); err != nil {
+			return fmt.Errorf("解析剧本角色失败: %w", err)
+		}
+	}
+
+	profileMap := make(map[string]model.CharacterProfile)
+	for _, p := range profiles {
+		if p.Name != "" {
+			profileMap[strings.TrimSpace(strings.ToLower(p.Name))] = p
+		}
+	}
+
+	updatedWork := false
+
+	for _, c := range chars {
+		key := strings.TrimSpace(strings.ToLower(c.Name))
+
+		if profile, exists := profileMap[key]; exists {
+			// 剧本中有新信息，补充到作品级设定（只补充稳定信息）
+			updated := false
+			if profile.Gender == "" && c.Gender != "" {
+				profile.Gender = c.Gender
+				updated = true
+			}
+			if profile.Personality == "" && c.Description != "" {
+				profile.Personality = c.Description
+				updated = true
+			}
+			if profile.Background == "" && c.Arc != "" {
+				profile.Background = c.Arc
+				updated = true
+			}
+			if updated {
+				profileMap[key] = profile
+				updatedWork = true
+			}
+		} else {
+			// 新角色：从剧本创建作品级设定
+			profiles = append(profiles, model.CharacterProfile{
+				Name:        c.Name,
+				Age:         c.Age,
+				Gender:      c.Gender,
+				Appearance:  c.Appearance,
+				Personality: c.Description,
+				Background:  c.Arc,
+			})
+			updatedWork = true
+		}
+	}
+
+	if updatedWork {
+		data, err := json.Marshal(profiles)
+		if err != nil {
+			return fmt.Errorf("序列化角色设定失败: %w", err)
+		}
+		work.CharacterProfiles = data
+		if err := s.workRepo.Update(work); err != nil {
+			return fmt.Errorf("更新作品角色设定失败: %w", err)
+		}
+	}
+
+	return nil
 }

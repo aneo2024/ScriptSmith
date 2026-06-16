@@ -37,7 +37,7 @@ const { TextArea } = Input;
 const { Title, Text } = Typography;
 const MAX_CHARS = 50000;
 
-const emptyChar = { name: '', age: '', gender: '', personality: '' };
+const emptyChar = { name: '', gender: '', personality: '' };
 
 export default function CreateWorkPage() {
   const [searchParams] = useSearchParams();
@@ -54,6 +54,17 @@ export default function CreateWorkPage() {
   const [characters, setCharacters] = useState([]);
   const navigate = useNavigate();
   const { submit, status, progress, error, isActive, taskId, stage, elapsedMs, cancel, reset } = useTask();
+
+  useEffect(() => {
+    reset();
+    setWorkTitle('');
+    setSynopsis('');
+    setNovelText('');
+    setFormat(DEFAULT_FORMAT);
+    setStyle(DEFAULT_STYLE);
+    setCharacters([]);
+    setExistingWork(null);
+  }, []);
 
   useEffect(() => {
     if (existingWorkId) {
@@ -257,35 +268,27 @@ export default function CreateWorkPage() {
                         onChange={(e) => updateCharacter(idx, 'name', e.target.value)}
                         disabled={isPolling}
                       />
-                      <Space>
-                        <Input
-                          size="small"
-                          placeholder="年龄"
-                          value={char.age}
-                          onChange={(e) => updateCharacter(idx, 'age', e.target.value)}
-                          style={{ width: 80 }}
-                          disabled={isPolling}
-                        />
-                        <Select
-                          size="small"
-                          placeholder="性别"
-                          value={char.gender || undefined}
-                          onChange={(v) => updateCharacter(idx, 'gender', v)}
-                          style={{ width: 80 }}
-                          disabled={isPolling}
-                          options={[
-                            { value: '男', label: '男' },
-                            { value: '女', label: '女' },
-                          ]}
-                          allowClear
-                        />
-                      </Space>
-                      <Input
+                      <Select
                         size="small"
-                        placeholder="性格特点（如：勇敢果断、内敛沉稳…）"
+                        placeholder="性别"
+                        value={char.gender || undefined}
+                        onChange={(v) => updateCharacter(idx, 'gender', v)}
+                        style={{ width: 100 }}
+                        disabled={isPolling}
+                        options={[
+                          { value: '男', label: '男' },
+                          { value: '女', label: '女' },
+                        ]}
+                        allowClear
+                      />
+                      <TextArea
+                        size="small"
+                        placeholder="性格特点（可留空，进入作品详情后由 AI 生成完整小传）"
                         value={char.personality}
                         onChange={(e) => updateCharacter(idx, 'personality', e.target.value)}
                         disabled={isPolling}
+                        autoSize={{ minRows: 2, maxRows: 4 }}
+                        maxLength={200}
                       />
                     </Space>
                   </Card>

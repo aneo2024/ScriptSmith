@@ -128,8 +128,12 @@ func main() {
 			auth.PUT("/works/:id", workH.UpdateWork)
 			auth.DELETE("/works/:id", workH.DeleteWork)
 
-			// 作品级 AI 角色设定（长相/年龄/性格/背景 — 全作品共享）
+			// 作品级 AI 角色设定（长相/性格/背景 — 全作品共享）
 			auth.POST("/works/:id/characters/profiles", workH.GenerateCharacterProfiles)
+			// 单个人物 AI 生成长文（生平/评价）
+			auth.POST("/works/:id/characters/:index/biography", workH.GenerateSingleCharacterBiography)
+			// 更新单个人物小传
+			auth.PUT("/works/:id/characters/:index", workH.UpdateCharacterProfile)
 
 			// 作品下的剧本列表
 			auth.GET("/works/:id/scripts", h.ListWorkScripts)

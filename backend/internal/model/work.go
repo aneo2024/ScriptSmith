@@ -14,6 +14,7 @@ type CharacterProfile struct {
 	Appearance  string `json:"appearance,omitempty"`  // 长相/外貌/体型 — 固定，不随场景变
 	Personality string `json:"personality,omitempty"` // 性格
 	Background  string `json:"background,omitempty"`  // 背景故事
+	Biography   string `json:"biography,omitempty"`   // AI 生成的生平/评价长文
 	AvatarURL   string `json:"avatar_url,omitempty"`
 }
 
