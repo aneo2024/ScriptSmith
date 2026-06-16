@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { App } from 'antd';
 import useScriptStore from '../store/scriptStore';
 import { updateContent, updateScene as updateSceneAPI } from '../services/api';
 import { EditOutlined } from '@ant-design/icons';
@@ -214,10 +215,9 @@ function ContentBlockRead({ item, isSelected, onClick, onDoubleClick }) {
 }
 
 const SceneCard = ({ scene: sceneProp }) => {
-  const script = useScriptStore((s) => s.script);
+  const { message } = App.useApp();
   const selectedContentId = useScriptStore((s) => s.selectedContentId);
   const selectContent = useScriptStore((s) => s.selectContent);
-  const setScript = useScriptStore((s) => s.setScript);
   const updateStoreScene = useScriptStore((s) => s.updateScene);
   const updateStoreContent = useScriptStore((s) => s.updateContent);
 
@@ -237,7 +237,7 @@ const SceneCard = ({ scene: sceneProp }) => {
 
   const handleContentSave = useCallback(async (updatedContent) => {
     setEditingContentId(null);
-    const scriptId = script?.id;
+    const scriptId = useScriptStore.getState().script?.id;
     if (!scriptId) return;
 
     updateStoreContent(sceneProp.id, updatedContent.id, updatedContent);
@@ -245,10 +245,12 @@ const SceneCard = ({ scene: sceneProp }) => {
     try {
       await updateContent(scriptId, updatedContent.id, updatedContent);
     } catch (err) {
-      console.error('保存内容块失败:', err);
-      setScript(script);
+      message.error('保存对白失败，请检查网络后重试');
+      // 回退到服务端最新数据
+      const { loadScript } = useScriptStore.getState();
+      loadScript(scriptId);
     }
-  }, [script, sceneProp.id, updateStoreContent, setScript]);
+  }, [sceneProp.id, updateStoreContent]);
 
   const handleContentCancel = useCallback(() => {
     setEditingContentId(null);
@@ -256,7 +258,7 @@ const SceneCard = ({ scene: sceneProp }) => {
 
   const handleTitleSave = useCallback(async (updatedScene) => {
     setEditingTitle(false);
-    const scriptId = script?.id;
+    const scriptId = useScriptStore.getState().script?.id;
     if (!scriptId) return;
 
     updateStoreScene(sceneProp.id, updatedScene);
@@ -264,10 +266,11 @@ const SceneCard = ({ scene: sceneProp }) => {
     try {
       await updateSceneAPI(scriptId, sceneProp.id, updatedScene);
     } catch (err) {
-      console.error('保存场景标题失败:', err);
-      setScript(script);
+      message.error('保存场景标题失败，请检查网络后重试');
+      const { loadScript } = useScriptStore.getState();
+      loadScript(scriptId);
     }
-  }, [script, sceneProp.id, updateStoreScene, setScript]);
+  }, [sceneProp.id, updateStoreScene]);
 
   const handleTitleCancel = useCallback(() => {
     setEditingTitle(false);
@@ -275,7 +278,7 @@ const SceneCard = ({ scene: sceneProp }) => {
 
   const handleSluglineSave = useCallback(async (newSlugline) => {
     setEditingSlugline(false);
-    const scriptId = script?.id;
+    const scriptId = useScriptStore.getState().script?.id;
     if (!scriptId) return;
 
     const updatedScene = { ...sceneProp, slugline: newSlugline };
@@ -284,10 +287,11 @@ const SceneCard = ({ scene: sceneProp }) => {
     try {
       await updateSceneAPI(scriptId, sceneProp.id, updatedScene);
     } catch (err) {
-      console.error('保存场景地点失败:', err);
-      setScript(script);
+      message.error('保存场景地点失败，请检查网络后重试');
+      const { loadScript } = useScriptStore.getState();
+      loadScript(scriptId);
     }
-  }, [script, sceneProp, updateStoreScene, setScript]);
+  }, [sceneProp, updateStoreScene]);
 
   const handleSluglineCancel = useCallback(() => {
     setEditingSlugline(false);

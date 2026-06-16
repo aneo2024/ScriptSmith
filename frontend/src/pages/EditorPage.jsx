@@ -6,7 +6,7 @@ import SceneNav from '../components/SceneNav';
 import SceneCard from '../components/SceneCard';
 import useScriptStore from '../store/scriptStore';
 import { useTask } from '../hooks/useTask';
-import { getScriptByTaskId, exportScriptYAML } from '../services/api';
+import api, { getScriptByTaskId, exportScriptYAML } from '../services/api';
 import { listWorkScripts, deleteScript } from '../services/work';
 import '../styles/script-editor.css';
 
@@ -91,6 +91,11 @@ export default function EditorPage() {
       return;
     }
     try {
+      // 先保存当前编辑器状态到数据库，确保导出的是最新数据
+      const currentScript = useScriptStore.getState().script;
+      if (currentScript) {
+        await api.put(`/scripts/${id}`, currentScript);
+      }
       const blob = await exportScriptYAML(id);
       const url = URL.createObjectURL(new Blob([blob], { type: 'text/yaml' }));
       const a = document.createElement('a');
