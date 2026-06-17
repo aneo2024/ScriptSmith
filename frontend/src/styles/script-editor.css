@@ -131,3 +131,83 @@
   font-size: 12px;
   color: #888;
 }
+
+/* ====== 打印样式：导出 PDF ====== */
+@media print {
+  /* 隐藏所有 UI */
+  .script-editor__nav,
+  .script-editor > div:first-child,
+  .ant-btn,
+  .ant-select,
+  .ant-space,
+  .ant-typography,
+  .ant-spin,
+  .content-edit-icon,
+  .scene-edit-icon,
+  .edit-btn,
+  .edit-actions,
+  .slugline-select,
+  .slugline-name-input,
+  .slugline-dot,
+  .content-block.editing,
+  button,
+  input,
+  select,
+  textarea {
+    display: none !important;
+  }
+
+  /* 全屏展示剧本 */
+  .script-editor {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  .script-editor__canvas {
+    width: 100% !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .scene-card {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 20px 0 !important;
+    min-height: auto !important;
+    page-break-after: always;
+  }
+
+  .scene-card:last-child {
+    page-break-after: auto;
+  }
+
+  .content-block {
+    background: transparent !important;
+    box-shadow: none !important;
+    cursor: auto !important;
+    break-inside: avoid;
+  }
+
+  .content-block:hover {
+    background: transparent !important;
+  }
+
+  .content-block.selected {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .scene-header {
+    border-bottom-color: #000 !important;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  @page {
+    margin: 2cm;
+  }
+}

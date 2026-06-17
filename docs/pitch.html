@@ -4,241 +4,487 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ScriptSmith 路演 — XEngineer</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.0.5/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.0.5/dist/theme/white.css">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f5f8f3;color:#1a1a1a;line-height:1.8;overflow-x:hidden;font-size:18px}
+:root{--green:#2d5a1e;--gold:#b88a2e;--blue:#2b6ac9;--purple:#6840a8;--light:#f4f8f2}
+.reveal{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;color:#333}
+.reveal h1{font-size:2.2em;color:var(--green);margin-bottom:0.2em;font-weight:700}
+.reveal h2{font-size:1.4em;margin-bottom:0.35em;font-weight:600}
+.reveal h3{font-size:0.9em;margin-bottom:0.1em;color:#333;font-weight:600}
+.reveal p,.reveal li{font-size:0.68em;line-height:1.8;color:#555}
+.reveal code{font-size:0.85em}
+.reveal .quote{font-size:0.85em;font-style:italic;color:var(--green);margin:0.4em 0;line-height:1.7}
+.reveal .quote-author{font-size:0.55em;color:#999;font-style:normal}
+.reveal .tag{display:inline-block;padding:2px 10px;border-radius:4px;font-size:0.45em;margin:2px;font-family:sans-serif}
+.reveal .tag-b{background:#eef5ff;color:var(--blue);border:1px solid #dce6f5}
+.reveal .tag-o{background:#fff6e8;color:var(--gold);border:1px solid #f5e2ce}
+.reveal .tag-p{background:#f5eeff;color:var(--purple);border:1px solid #e4d8f5}
+.reveal .tag-g{background:#edf5ea;color:var(--green);border:1px solid #dae5d4}
+.reveal .row{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:0.3em 0}
+.reveal .hl{background:var(--light);border-left:3px solid var(--green);padding:0.3em 0.8em;border-radius:0 6px 6px 0;font-size:0.6em;color:#555;text-align:left;margin:0.3em 0;line-height:1.6}
+.reveal .grid{display:grid;gap:14px;text-align:left}
+.reveal .grid-2{grid-template-columns:1fr 1fr}
+.reveal .grid-3{grid-template-columns:1fr 1fr 1fr}
+.reveal .card{background:#fff;border-radius:8px;padding:0.6em 0.9em;border:1px solid #e8ede5;transition:transform 0.25s ease,box-shadow 0.25s ease}
+.reveal .card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.08)}
+.reveal .card p{font-size:0.62em;margin:0.15em 0;line-height:1.7}
+.reveal .card h3{font-size:0.82em;margin-bottom:0.15em}
+.reveal .card code{font-size:0.88em;background:#f4f8f2;padding:0 4px;border-radius:3px}
 
-/* 滚动渐入 */
-.fade-in{opacity:0;transform:translateY(30px);transition:opacity 0.7s ease,transform 0.7s ease}
-.fade-in.visible{opacity:1;transform:translateY(0)}
+/* 卡片色带 */
+.reveal .card-g{border-left:3px solid var(--green);padding-left:calc(0.9em - 2px)}
+.reveal .card-b{border-left:3px solid var(--blue);padding-left:calc(0.9em - 2px)}
+.reveal .card-o{border-left:3px solid var(--gold);padding-left:calc(0.9em - 2px)}
+.reveal .card-p{border-left:3px solid var(--purple);padding-left:calc(0.9em - 2px)}
 
-.slide{max-width:1100px;margin:0 auto;padding:70px 56px;min-height:100vh;display:flex;flex-direction:column;justify-content:center}
-h1{font-size:52px;font-weight:700;margin-bottom:8px}
-h2{font-size:34px;font-weight:600;margin-bottom:24px;color:#2d5a1e}
-h3{font-size:24px;font-weight:600;margin-bottom:10px}
-.subtitle{font-size:22px;color:#666;margin-bottom:28px}
-p{font-size:18px;line-height:1.8}
-.grid{display:grid;gap:24px}
-.grid-2{grid-template-columns:1fr 1fr}
-.grid-3{grid-template-columns:1fr 1fr 1fr}
+.reveal .badge{font-size:0.48em;padding:3px 10px;border-radius:16px;display:inline-block;margin-bottom:0.3em;letter-spacing:1px;font-weight:600;font-family:sans-serif}
 
-.card{background:#fff;border:1px solid #e0e8db;border-radius:14px;padding:28px;transition:transform 0.25s ease,box-shadow 0.25s ease}
-.card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(45,90,30,0.1)}
-.card p{color:#555;font-size:17px;line-height:1.7}
+/* ====== 技术架构：时间轴绿栏 ====== */
+.reveal .tech-header{
+  background:var(--green);color:#fff;
+  padding:0.35em 0.8em 0.2em 0.8em;margin:-0.5em -1em 0 -1em;
+  font-family:sans-serif;position:relative;
+}
+.reveal .tech-header .tech-label{
+  font-size:0.55em;opacity:0.75;font-weight:400;letter-spacing:1px;
+}
+.reveal .tech-header .tech-title{
+  font-size:0.75em;font-weight:700;letter-spacing:2px;
+  margin-top:0.05em;
+}
+/* 时间轴：双点连线 */
+.reveal .tech-timeline{
+  display:flex;align-items:center;justify-content:center;
+  margin:0.25em 0 0.15em 0;gap:0;
+}
+.reveal .tl-dot{
+  width:10px;height:10px;border-radius:50%;
+  border:2px solid rgba(255,255,255,0.5);background:transparent;
+  flex-shrink:0;
+}
+.reveal .tl-dot.active{background:#fff;border-color:#fff}
+.reveal .tl-line{flex:1;height:2px;background:rgba(255,255,255,0.3);min-width:60px}
+.reveal .tl-label-row{
+  display:flex;justify-content:space-between;font-size:0.45em;
+  opacity:0.7;padding:0.1em 0 0.2em 0;letter-spacing:1px;
+}
 
-.tag{display:inline-block;padding:4px 14px;border-radius:6px;font-size:15px;margin-right:6px;margin-bottom:6px}
-.tag-blue{background:#e6f7ff;color:#1890ff}
-.tag-green{background:#f6ffed;color:#52c41a}
-.tag-purple{background:#f9f0ff;color:#722ed1}
-.tag-orange{background:#fff7e6;color:#fa8c16}
-.tag-red{background:#fff1f0;color:#f5222d}
-.time-badge{background:#2d5a1e;color:#fff;font-size:14px;padding:5px 14px;border-radius:14px;margin-bottom:16px;display:inline-block}
-.row{display:flex;gap:12px;flex-wrap:wrap}
-.center{text-align:center}
+/* ====== 拓扑流程图 ====== */
+.reveal .topo-row{display:flex;align-items:stretch;justify-content:center;gap:12px;flex-wrap:wrap;margin:0.25em 0}
+.reveal .flow-card{
+  background:var(--light);border:1px solid #d8e4d0;border-radius:8px;
+  padding:0.45em 0.65em;text-align:left;min-width:125px;
+  transition:transform 0.25s ease,box-shadow 0.25s ease;
+}
+.reveal .flow-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.06)}
+.reveal .flow-card .ftitle{font-size:0.58em;font-weight:700;color:#333}
+.reveal .flow-card .fsub{font-size:0.44em;color:#888;margin-top:0.12em;line-height:1.5}
+.reveal .flow-card code{font-size:0.85em;background:rgba(45,90,30,0.06);padding:0 3px;border-radius:2px}
+.reveal .flow-arrow{font-size:1.15em;color:#b0c8a0;margin:0 4px;font-weight:300;align-self:center}
+.reveal .flow-explain{
+  text-align:center;font-size:0.5em;color:#999;margin-top:0.3em;
+  padding:0.2em 0.6em;background:var(--light);border-radius:4px;display:inline-block;
+}
+.reveal .section-label-row{
+  display:flex;align-items:center;gap:8px;margin:0.45em 0 0.15em 0;
+}
+.reveal .section-label-row .sec-tag{
+  font-size:0.42em;padding:2px 8px;border-radius:3px;
+  background:var(--light);color:var(--green);font-weight:600;
+  font-family:sans-serif;letter-spacing:1px;
+}
+.reveal .section-label-row .sec-line{
+  flex:1;height:1px;background:#e0e8d8;
+}
 
-/* 呼吸光效 */
-@keyframes breathe{0%,100%{text-shadow:0 0 20px rgba(45,90,30,0.08)}50%{text-shadow:0 0 40px rgba(45,90,30,0.2)}}
-.breathe{animation:breathe 4s ease-in-out infinite}
-.quote{font-size:26px;font-style:italic;color:#2d5a1e;line-height:1.9;max-width:760px;margin:0 auto}
-.quote-author{margin-top:8px;font-size:16px;color:#999;font-style:normal}
+/* 演示流程 */
+.reveal .step-num{display:inline-block;width:1.6em;height:1.6em;line-height:1.6em;border-radius:50%;text-align:center;font-size:0.65em;font-weight:700;margin-right:0.4em;background:var(--light);color:var(--green)}
+.reveal .step-card{padding:0.5em 0.7em}
+.reveal .step-card p{font-size:0.55em;margin:0.1em 0 0 2em;line-height:1.6;color:#777}
 
-.callout{background:#f0f5ec;padding:18px;border-radius:10px;font-size:17px;color:#444;margin-top:16px;line-height:1.7}
+/* Canvas 粒子 */
+.reveal .particle-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.reveal .particle-content{position:relative;z-index:1}
 
 @media(max-width:768px){
-  .slide{padding:40px 24px}
-  h1{font-size:34px}
-  h2{font-size:26px}
-  .grid-2,.grid-3{grid-template-columns:1fr}
-  .quote{font-size:20px}
+  .reveal .grid-2,.reveal .grid-3{grid-template-columns:1fr}
+  .reveal h1{font-size:1.6em}
+  .reveal h2{font-size:1.2em}
+  .reveal .topo-row{flex-direction:column;align-items:center}
+  .reveal .flow-arrow{transform:rotate(90deg)}
+  .reveal .tl-label-row{font-size:0.38em}
 }
 </style>
 </head>
 <body>
-<script>
-document.addEventListener("DOMContentLoaded",function(){
-  var observer=new IntersectionObserver(function(entries){
-    entries.forEach(function(e){
-      if(e.isIntersecting){e.target.classList.add("visible")}
-    })
-  },{threshold:0.15})
-  document.querySelectorAll(".fade-in").forEach(function(el){observer.observe(el)})
-})
-</script>
+<div class="reveal"><div class="slides">
 
-<!-- ===== 封面 ===== -->
-<div class="slide center" style="background:linear-gradient(180deg,#f5f8f3 0%,#e8f0e0 100%)">
-<div style="font-size:14px;color:#bbb;margin-bottom:24px;letter-spacing:2px">XENGINEER · 七牛云</div>
-<h1 class="breathe" style="font-size:56px;color:#2d5a1e">ScriptSmith</h1>
-<p style="font-size:18px;color:#999;margin-bottom:36px">AI 小说转剧本工具</p>
-<div class="quote">
+<!-- ====== 封面 ====== -->
+<section class="particle-slide" data-background-gradient="linear-gradient(135deg,#e8f0e4,#f4f8f2,#fafcf9)">
+<canvas class="particle-canvas"></canvas>
+<div class="particle-content">
+<p style="font-size:0.45em;color:#bbb;letter-spacing:2px;font-family:sans-serif">XENGINEER · 七牛云</p>
+<h1 style="font-size:2.8em">ScriptSmith</h1>
+<p style="font-size:0.6em;color:#aaa;letter-spacing:1px;font-family:sans-serif">AI 小说转剧本工具</p>
+<div class="quote" style="margin-top:0.6em">
 "The writer&rsquo;s vocation is to make the unknown known."
 <div class="quote-author">— André Gide</div>
 </div>
-<p style="font-size:18px;color:#666;max-width:520px;margin:32px auto 0">
-对 ScriptSmith 来说，<strong>小说是已知，剧本是未知</strong>。<br>
-用 AI 完成这趟翻译，让每个故事都能登上舞台。
-</p>
-<div class="row" style="justify-content:center;margin-top:32px">
-<span class="tag tag-blue">React 19</span>
-<span class="tag tag-green">Go + Gin</span>
-<span class="tag tag-purple">DeepSeek API</span>
-<span class="tag tag-orange">PostgreSQL</span>
+<p style="font-size:0.65em;color:#888;margin-top:0.5em">ScriptSmith 不会替你写完。<br>但让从想法到初稿这件事，<strong style="color:var(--green)">没那么难了</strong>。</p>
+<p style="font-size:0.45em;color:#ccc;margin-top:1.2em;font-family:sans-serif">黄晓悦 · 华中农业大学 2023 级 · 人工智能专业</p>
 </div>
-<p style="margin-top:48px;font-size:16px;color:#bbb">黄晓悦 · 华中农业大学 2023 级 · 人工智能专业</p>
-</div>
-<!-- ===== 产品概念 ===== -->
-<div class="slide">
-<div class="fade-in">
-<h2>产品概念</h2>
-<p style="font-size:20px;margin-bottom:24px">它是一个围绕创作者设计的"创作台"，不是冷冰冰的 AI 生成器。</p>
+</section>
+
+<!-- ====== 项目概述 ====== -->
+<section>
+<h2 style="color:var(--green)">项目概述</h2>
 <div class="grid grid-2">
-<div class="card">
-<h3>开屏页 · 创作氛围</h3>
-<p>推开大门，是普希金的森林和莎士比亚的头像。纪德的话告诉你：作家的天职是让未知变为已知。这个页面不赶时间，它在说——你到了一个创作空间。</p>
+<div class="card card-g fragment fade-up">
+<h3>做什么的</h3>
+<p>基于大语言模型的全栈 Web 应用，将小说文本转换为结构化影视剧本。支持 7 种格式、11 种改编风格，覆盖角色管理、人物小传生成、剧本编辑与 YAML 导出。</p>
 </div>
-<div class="card">
-<h3>个人主页 · 环岛仪表盘</h3>
-<p>头像居中，字数、作品数、访客数三个指标绕成一圈浮动。12.5 万而不是 125000，点击作品数直接跳转。不是管理后台，是你创作旅程的记录。</p>
+<div class="card card-b fragment fade-up">
+<h3>技术规模</h3>
+<p>前端 React 19 + Zustand + Ant Design，后端 Go 1.25 + Gin + GORM，数据库 SQLite / PostgreSQL 双模式。Docker Compose 三容器一键部署。</p>
 </div>
-<div class="card">
-<h3>编辑器 · 掌控感</h3>
-<p>场景导航、内容块按类型着色、CodeMirror 实时编辑 YAML。支持多种风格改写。从 AI 初稿到你最后的定稿，状态一目了然。</p>
+<div class="card card-o fragment fade-up">
+<h3>设计哲学</h3>
+<p>AI 负责重复劳动——结构转换、风格改编、角色生成。作者保留全部控制权：选择用什么风格、什么时候调用 AI、认不认可 AI 的修改。</p>
 </div>
-<div class="card">
-<h3>灵感栏目 · 博客形式</h3>
-<p>预设话题 + AI 自动生成创作知识文章。后期用户也可以投稿，成为作家编辑的交流平台。</p>
+<div class="card card-p fragment fade-up">
+<h3>开发背景</h3>
+<p>XEngineer 竞赛题目：AI + 创作工具。从选题到完整交付，独立完成前后端全栈开发。</p>
 </div>
 </div>
+</section>
+
+<!-- ====== 技术架构（1/2）：数据流与存储 ====== -->
+<section>
+<div class="tech-header">
+<div class="tech-label">技术架构</div>
+<div class="tech-title">数据流与存储</div>
+<div class="tech-timeline">
+<span class="tl-dot active"></span>
+<span class="tl-line"></span>
+<span class="tl-dot"></span>
 </div>
+<div class="tl-label-row"><span>数据流与存储</span><span>工程与部署</span></div>
 </div>
 
-<!-- ===== 场景一：小说转剧本 ===== -->
-<div class="slide">
-<div class="fade-in">
-<span class="time-badge">业务场景</span>
-<h2>场景一：小说变成剧本</h2>
-<p style="font-size:20px;margin-bottom:20px">一个作者写了一部小说，想改成剧本——但他不会写剧本格式。</p>
-<div class="grid grid-2">
-<div class="card">
-<h3>难在哪</h3>
-<p>剧本有固定的格式规范——slugline、对白、转场标记。小说的心理描写要变成动作和对话暗示。《百年孤独》改成剧本不必从头抄，但格式转换这件事就拦住了一大半作者。</p>
+<!-- 数据存储结构 -->
+<div class="section-label-row"><span class="sec-tag">数据存储</span><span class="sec-line"></span></div>
+<div class="topo-row">
+<div class="flow-card fragment fade-up" style="border-left:3px solid var(--green);min-width:140px">
+<div class="ftitle">📦 Work 作品表</div>
+<div class="fsub"><code>id</code> · <code>title</code> · <code>format</code> · <code>style</code><br><code>metadata</code> JSON · <code>characters</code> JSON</div>
 </div>
-<div class="card">
-<h3>ScriptSmith 怎么做</h3>
-<p>上传小说 → 选格式（电影/电视剧/舞台剧/动画/短片/网剧/纪录片）和风格（忠实原著/武侠/黑色电影等 11 种）→ 点转换 → 拿到初稿。77 种组合，不同题材用不同风格。</p>
+<div class="flow-arrow fragment fade-up">⟶</div>
+<div class="flow-card fragment fade-up" style="border-left:3px solid var(--blue);min-width:150px">
+<div class="ftitle">📄 Script 剧集表</div>
+<div class="fsub"><code>work_id</code> FK 关联作品<br><code>episode_number</code> · <code>scenes</code> JSON<br><code>adaptation_notes</code> JSON</div>
+</div>
+<div class="flow-arrow fragment fade-up">⟶</div>
+<div class="flow-card fragment fade-up" style="border-left:3px solid var(--gold);min-width:145px">
+<div class="ftitle">🎬 Scene 内嵌数组</div>
+<div class="fsub"><code>sequence</code> · <code>slugline</code><br><code>content_blocks</code> []</div>
+</div>
+<div class="flow-arrow fragment fade-up">⟶</div>
+<div class="flow-card fragment fade-up" style="border-left:3px solid var(--purple);min-width:145px">
+<div class="ftitle">📝 Content 内容块</div>
+<div class="fsub"><code>type</code>: action / dialogue<br>transition / sound / note</div>
 </div>
 </div>
-<div class="callout">
-<strong>然后呢？</strong>AI 不是黑箱。每处改编都记录了备注——为什么合并两个角色、为什么删掉一段心理描写。作者可以信任，也可以推翻。初稿是你的，决定权也在你。
-</div>
-</div>
-</div>
+<p class="fragment fade-up flow-explain"><code>characters</code> 存于 Work 层，所有 Script 通过 <code>work_id</code> 共享 — 更新角色一次，全剧集自动同步</p>
 
-<!-- ===== 场景二：角色深化 ===== -->
-<div class="slide">
-<div class="fade-in">
-<span class="time-badge">业务场景</span>
-<h2>场景二：让角色有血有肉</h2>
-<p style="font-size:20px;margin-bottom:20px">初稿有了，但人物还不够立体。郭靖长什么样？黄蓉经历了什么？</p>
-<div class="grid grid-2">
-<div class="card">
-<h3>直接的问题</h3>
-<p>初稿里角色只有对白和基本介绍。要让角色"立起来"，需要外貌、性格、背景、完整人生经历。自己写人物小传？很多作者不擅长或者没时间。</p>
+<!-- 转换任务流 -->
+<div class="section-label-row"><span class="sec-tag">转换任务流</span><span class="sec-line"></span></div>
+<div class="topo-row">
+<div class="flow-card fragment fade-up" style="border-left:3px solid var(--blue);min-width:110px;text-align:center">
+<div class="ftitle">👆 POST /convert</div>
+<div class="fsub">小说文本<br>format + style</div>
 </div>
-<div class="card">
-<h3>产品解法</h3>
-<p>在作品详情页，作者按需点击：<br>
-• 生成角色外貌描述<br>
-• 生成作品级人物小传（长相+性格+背景，批量完成）<br>
-• 生成单个人物生平长文（400-800 字，生平轨迹+性格解析+人物评价）<br>
-• 手动编辑任何字段</p>
+<div class="flow-arrow fragment fade-up">⟶</div>
+<div class="flow-card fragment fade-up" style="border-left:3px solid var(--gold);min-width:110px;text-align:center">
+<div class="ftitle">📥 Task 表写入</div>
+<div class="fsub"><code>status: pending</code><br>返回 <code>task_id</code></div>
+</div>
+<div class="flow-arrow fragment fade-up">⟶</div>
+<div class="flow-card fragment fade-up" style="border-left:3px solid var(--purple);min-width:115px;text-align:center">
+<div class="ftitle">⚙️ Goroutine</div>
+<div class="fsub">调 AI API<br>解析 JSON 响应</div>
+</div>
+<div class="flow-arrow fragment fade-up">⟶</div>
+<div class="flow-card fragment fade-up" style="border-left:3px solid var(--green);min-width:125px;text-align:center">
+<div class="ftitle">💾 写入 + 回调</div>
+<div class="fsub">INSERT Script<br>UPDATE Work<br>Task → completed</div>
+</div>
+<div class="flow-arrow fragment fade-up">⟶</div>
+<div class="flow-card fragment fade-up" style="border-left:3px solid var(--blue);min-width:110px;text-align:center">
+<div class="ftitle">🔄 前端轮询</div>
+<div class="fsub">GET /task/:id<br>2s → 跳转编辑器</div>
 </div>
 </div>
-<div class="callout">
-<strong>为什么要把角色数据拆成字段？</strong>外貌、性格、背景各自独立——作者在编辑器可以单独改外貌不影响性格；导出 YAML 时外貌字段可以被外部工具读取；以后接 AI 生图，外貌字段直接当 prompt；以后给演员开权限，他看到的就是作者打磨好的完整小传。同一份数据，多种消费方式，这就是结构化设计的意义。
-</div>
-</div>
-</div>
+<p class="fragment fade-up flow-explain">HTTP 请求秒级返回 · AI 调用分钟级执行 · Goroutine 解耦 — 用户不用等</p>
+</section>
 
-<!-- ===== 场景三：多集管理 ===== -->
-<div class="slide">
-<div class="fade-in">
-<span class="time-badge">业务场景</span>
-<h2>场景三：一部作品，多集剧本</h2>
-<p style="font-size:20px;margin-bottom:20px">长篇小说分多集改编——每集独立，但角色设定不能前后打架。</p>
+<!-- ====== 技术架构（2/2）：工程与部署 ====== -->
+<section>
+<div class="tech-header">
+<div class="tech-label">技术架构</div>
+<div class="tech-title">工程与部署</div>
+<div class="tech-timeline">
+<span class="tl-dot"></span>
+<span class="tl-line"></span>
+<span class="tl-dot active"></span>
+</div>
+<div class="tl-label-row"><span>数据流与存储</span><span>工程与部署</span></div>
+</div>
 <div class="grid grid-2">
-<div class="card">
-<h3>多集创作的痛</h3>
-<p>第 1 集郭靖 18 岁，第 5 集他 25 岁了。每集剧本单独存的话，设定需要重复写，翻几集就不知道哪一版是最新的。多集创作最大的痛苦就是维护一致性。</p>
+<div class="card fragment fade-up">
+<h3>双数据库策略</h3>
+<p>开发：SQLite 零配置，<code>scriptsmith.db</code> 单文件备份即全量。生产：PostgreSQL 16，<code>DB_TYPE</code> 环境变量切换。GORM AutoMigrate <strong>启动即建表</strong>。</p>
 </div>
-<div class="card">
-<h3>产品怎么做</h3>
-<p>Work（作品）和 Script（剧集）分两层。稳定的属性（性别、性格、背景）存在 Work 层，所有剧集共享。每集自己的状态（年龄、弧光）存在 Script 层，各自独立。后台双向同步——信息更新了自动同步过去。用户完全无感。</p>
+<div class="card fragment fade-up">
+<h3>JWT 安全设计</h3>
+<p>Access Token + Refresh Token。<strong>一次性轮换</strong>：每次刷新返回新 token，旧 token 立即失效。防止被盗后长期滥用。</p>
 </div>
+<div class="card fragment fade-up">
+<h3>AI Provider 抽象</h3>
+<p>接口抽象，默认集成 DeepSeek。<strong>用户自行配置任意 OpenAI 兼容 API</strong>，支持连接测试和设为默认。</p>
 </div>
-<div class="callout">
-<strong>体验上：</strong>一次转换就是新的一集，系统自动编号。删除一集其他集自动重排。删作品时级联删除所有相关剧集和任务。用户不用管数据存在哪层，只管创作。
-</div>
-</div>
-</div>
-<!-- ===== 架构提炼 ===== -->
-<div class="slide">
-<div class="fade-in">
-<span class="time-badge">支撑这些场景的设计</span>
-<h2>三个场景背后，三个设计</h2>
-<div class="grid grid-3">
-<div class="card">
-<h3>77 种内容组合</h3>
-<p style="font-size:16px">7 种格式 × 11 种风格。前端枚举、后端 prompt 映射、AI 输出——同一组 key 串联。加一对格式和风格只需要加数据，不改业务代码。</p>
-</div>
-<div class="card">
-<h3>分步深化路径</h3>
-<p style="font-size:16px">转换 → 编辑 → 生成外貌 → 生成小传 → 生成生平 → 导出。每一步独立可选可重复。角色没整理好时 omitempty 保证文件干净体面。</p>
-</div>
-<div class="card">
-<h3>两级存储 + 字段结构化</h3>
-<p style="font-size:16px">Work 层管稳定属性，Script 层管剧集状态。角色字段拆开——编辑器、YAML 导出、未来生图，各取所需。</p>
+<div class="card fragment fade-up">
+<h3>Docker 一键部署</h3>
+<p><code>docker compose up -d</code> 三容器：PostgreSQL + Go 后端 + Nginx。多阶段构建，镜像分层缓存。</p>
 </div>
 </div>
-</div>
-</div>
+</section>
 
-<!-- ===== 演示 ===== -->
-<div class="slide">
-<div class="fade-in">
-<span class="time-badge">演示</span>
-<h2>现场走一遍</h2>
+<!-- ====== 前端设计：交互与技术选型 ====== -->
+<section data-background-gradient="linear-gradient(180deg,#fafcf9,#f4f8f2)">
+<h2 style="color:var(--green)">前端设计：交互与技术选型</h2>
 <div class="grid grid-2">
-<div class="card"><h3>1. 封面 → 仪表盘</h3><p>普希金森林、环岛数据、点作品数跳转</p></div>
-<div class="card"><h3>2. 提交小说</h3><p>选格式/风格/Provider，异步转换，进度条动画</p></div>
-<div class="card"><h3>3. 编辑剧本</h3><p>场景导航、内容块编辑、YAML 切换</p></div>
-<div class="card"><h3>4. 作品详情</h3><p>按需生成梗概、外貌、小传、生平</p></div>
-<div class="card"><h3>5. 导出 YAML</h3><p>查看结构化剧本文件</p></div>
-<div class="card"><h3>6. 灵感栏目</h3><p>AI 生成的剧本创作文章</p></div>
+<div class="card card-b fragment fade-up">
+<h3>状态管理：Zustand + 乐观更新</h3>
+<p>剧本编辑器状态由 Zustand store 统一管理。用户双击修改 → <strong>本地 store 立即生效</strong> → 异步 PUT。失败从服务端拉取回滚，几乎感知不到网络延迟。</p>
+</div>
+<div class="card card-p fragment fade-up">
+<h3>自定义 Hooks：useTask 轮询</h3>
+<p>封装 useTask hook 管理任务生命周期。2s 间隔轮询，完成自动跳转编辑器。<strong>状态持久化到 localStorage</strong>，离开页面回来继续。</p>
+</div>
+<div class="card card-g fragment fade-up">
+<h3>结构化编辑器设计</h3>
+<p>不做自由文本编辑器，做<strong>领域专用编辑器</strong>。左侧场景导航，右侧按内容块类型分色渲染。双击进入内联编辑，Esc 取消、Ctrl+Enter 保存。</p>
+</div>
+<div class="card card-o fragment fade-up">
+<h3>按需调用 AI 的 UI</h3>
+<p>AI 功能不自动触发。<strong>三个独立按钮</strong>——外貌 / 小传 / 生平。用户决定何时调用、调用哪个。每次明确消耗 token，不满意可重新生成。</p>
 </div>
 </div>
-</div>
+</section>
 
-<!-- ===== 总结 ===== -->
-<div class="slide center">
-<div class="fade-in">
-<div class="quote" style="font-size:24px">
+<!-- ====== 场景一：多格式 × 多风格 ====== -->
+<section>
+<div class="badge fragment fade-up" style="background:#eef5ff;color:var(--blue)">核心功能</div>
+<h2 style="color:var(--green)">小说转剧本：多格式 × 多风格</h2>
+<div class="grid grid-2">
+<div class="card card-g fragment fade-up">
+<h3>怎么做的</h3>
+<p>7 种格式（电影 / 电视剧 / 舞台剧 / 动画 / 短片 / 网剧 / 纪录片）× 11 种改编风格。前端枚举选择 → 后端 prompt 映射 → AI 输出统一结构。</p>
+</div>
+<div class="card card-o fragment fade-up">
+<h3>亮点在哪</h3>
+<p>格式和风格是剧本改编的基础决策。做成下拉选项，用户不需要自己组织 prompt 来描述想要什么格式、什么风格——直接选，专注写内容。</p>
+</div>
+</div>
+</section>
+
+<!-- ====== 场景二：结构化编辑器 ====== -->
+<section>
+<div class="badge fragment fade-up" style="background:#edf5ea;color:var(--green)">核心功能</div>
+<h2 style="color:var(--green)">结构化剧本编辑</h2>
+<div class="grid grid-2">
+<div class="card card-b fragment fade-up">
+<h3>怎么做的</h3>
+<p>左侧场景导航按顺序列出所有场次，点击切换。右侧展示 slugline（内 / 外景 · 地点 · 时间）、内容块（动作 / 对白 / 转场 / 音效 / 备注）。<strong>双击任意字段直接编辑</strong>，不同类型块用不同颜色区分。</p>
+<p style="margin-top:0.3em;font-size:0.52em;color:#999">录制建议：场景导航切换 + 双击编辑对白 + 颜色区分</p>
+</div>
+<div class="card card-g fragment fade-up">
+<h3>亮点在哪</h3>
+<p>剧本不是长文本，是有结构的。场景、对白、动作各司其职。按<strong>场景和内容块维度操作</strong>，而不是在一大段文字里找某句台词。改完本地即时刷新，后台异步保存。</p>
+</div>
+</div>
+</section>
+
+<!-- ====== 场景三：角色深化 ====== -->
+<section>
+<div class="badge fragment fade-up" style="background:#f5eeff;color:var(--purple)">核心功能</div>
+<h2 style="color:var(--green)">角色深化：从设定到小传</h2>
+<div class="grid grid-2">
+<div class="card card-p fragment fade-up">
+<h3>怎么做的</h3>
+<p>角色分四个维度：外貌、性格、背景、生平。<strong>独立字段存储</strong>，互不干扰。三个独立按钮分别触发 AI 生成。人物小传页面展示完整角色画像，可手动编辑。</p>
+<p style="margin-top:0.3em;font-size:0.52em;color:#999">录制建议：点击生成按钮 → 角色卡片刷新 → 小传页面</p>
+</div>
+<div class="card card-o fragment fade-up">
+<h3>亮点在哪</h3>
+<p>信息拆成独立字段后，编辑器、YAML 导出、人物小传各取所需。<strong>按需调用 AI</strong>，不想生成就不点，不满意再点一次，不浪费 token。</p>
+</div>
+</div>
+</section>
+
+<!-- ====== 场景四：多集管理 ====== -->
+<section>
+<div class="badge fragment fade-up" style="background:#fff6e8;color:var(--gold)">核心功能</div>
+<h2 style="color:var(--green)">多集管理：两层存储</h2>
+<div class="grid grid-2">
+<div class="card card-o fragment fade-up">
+<h3>怎么做的</h3>
+<p>作品层存角色人设卡，对所有剧集生效。剧集层存每集特有数据。点「转新的一集」自动创建，删除后<strong>自动重新编号</strong>。</p>
+</div>
+<div class="card card-g fragment fade-up">
+<h3>亮点在哪</h3>
+<p>两层存储让角色信息<strong>改一次全剧同步</strong>。多集切换下拉栏在编辑器顶部，用户只管创作，不用管数据怎么存的。</p>
+</div>
+</div>
+</section>
+
+<!-- ====== 场景五：改编备注 ====== -->
+<section>
+<div class="badge fragment fade-up" style="background:#eef5ff;color:var(--blue)">核心功能</div>
+<h2 style="color:var(--green)">改编备注：让 AI 有据可查</h2>
+<div class="grid grid-2">
+<div class="card card-b fragment fade-up">
+<h3>怎么做的</h3>
+<p>AI prompt 强制输出改编日志：<strong>改了哪里</strong>、<strong>怎么改的</strong>、<strong>为什么这么改</strong>。存为结构化字段，前端浮窗随时展开查看。</p>
+</div>
+<div class="card card-p fragment fade-up">
+<h3>亮点在哪</h3>
+<p>把每次修改的理由写出来，<strong>判断权交还给作者</strong>。认可就保留，不认可就改回去。有据可查才敢放心用 AI。</p>
+</div>
+</div>
+</section>
+
+<!-- ====== 演示流程 ====== -->
+<section data-background-gradient="linear-gradient(180deg,#f8faf7,#fafcf9)">
+<h2 style="color:var(--green)">演示流程</h2>
+<div class="grid grid-2">
+<div class="step-card card fragment fade-up"><h3><span class="step-num" style="background:#eef5ff;color:var(--blue)">1</span>封面 → 仪表盘</h3><p>莎士比亚名言 + 森林渐变背景，不催注册先展示氛围。环岛数据绕头像浮动，点击直接跳转。</p></div>
+<div class="step-card card fragment fade-up"><h3><span class="step-num" style="background:#f5eeff;color:var(--purple)">2</span>提交小说</h3><p>粘贴小说文本，下拉选格式和风格，点「开始转换」。进度条实时反馈，关页面不中断。</p></div>
+<div class="step-card card fragment fade-up"><h3><span class="step-num" style="background:#edf5ea;color:var(--green)">3</span>编辑剧本</h3><p>左侧场景导航，右侧内容块按颜色区分。双击改对白 / 场景信息，浮窗查看改编备注。</p></div>
+<div class="step-card card fragment fade-up"><h3><span class="step-num" style="background:#fff6e8;color:var(--gold)">4</span>角色深化</h3><p>外貌 → 小传 → 生平，三按钮独立触发。小传页面 AI 写完整生平，可手动编辑。</p></div>
+<div class="step-card card fragment fade-up"><h3><span class="step-num" style="background:#eef5ff;color:var(--blue)">5</span>导出 YAML</h3><p>一键下载标准 YAML，兼容 Final Draft、Trelby 等制片软件和 Git 版本控制。</p></div>
+<div class="step-card card fragment fade-up"><h3><span class="step-num" style="background:#f5eeff;color:var(--purple)">6</span>灵感栏目</h3><p>AI 生成创作知识文章，每日推荐话题，按话题聚合浏览。</p></div>
+</div>
+</section>
+
+<!-- ====== 总结 ====== -->
+<section class="particle-slide" data-background-gradient="linear-gradient(135deg,#e8f0e4,#f4f8f2,#fafcf9)">
+<canvas class="particle-canvas"></canvas>
+<div class="particle-content">
+<div class="quote" style="font-size:0.95em;color:#444">
 "Every writer I know has trouble writing."
-<div class="quote-author" style="font-size:14px">— Joseph Heller</div>
+<div class="quote-author">— Joseph Heller</div>
 </div>
-<p style="font-size:18px;color:#666;margin:32px 0 24px">
-ScriptSmith 不会替你把剧本写完。<br>
-但它让"从不会写到写出初稿"这件事，变得没那么难了。
-</p>
-<div class="row" style="justify-content:center;margin-top:12px">
-<span class="tag tag-blue">小说 → 剧本</span>
-<span class="tag tag-green">角色深化</span>
-<span class="tag tag-purple">多集管理</span>
-<span class="tag tag-orange">编辑器打磨</span>
+<p style="font-size:0.65em;color:#888;margin-top:0.6em">ScriptSmith 把重复劳动交给 AI。<br>从小说到剧本初稿，从角色外貌到生平小传，<strong style="color:var(--green)">一键生成，作者来打磨</strong>。</p>
+<p class="fragment fade-up" style="font-size:0.5em;color:#bbb;margin-top:0.3em">下一步：剧组多人协作共享剧本，更智能的 AI 交互同时保持按需调用的节能设计。</p>
+<div class="row fragment fade-up" style="margin-top:0.6em">
+<span class="tag tag-g">四层数据模型</span>
+<span class="tag tag-b">异步 Task</span>
+<span class="tag tag-p">JSON + YAML</span>
+<span class="tag tag-o">零配置部署</span>
 </div>
-<p style="margin-top:48px;font-size:16px;color:#bbb">黄晓悦 · 华中农业大学 2023 级 · 人工智能专业 · XEngineer 路演</p>
+<div class="row fragment fade-up">
+<span class="tag tag-g">多格式×多风格</span>
+<span class="tag tag-b">角色结构化</span>
+<span class="tag tag-p">两层存储</span>
+<span class="tag tag-o">改编备注</span>
 </div>
+<p style="font-size:0.45em;color:#ccc;margin-top:1em;font-family:sans-serif">黄晓悦 · 华中农业大学 2023 级 · 人工智能专业 · XEngineer 路演</p>
 </div>
+</section>
 
+</div></div>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.0.5/dist/reveal.js"></script>
+<script>
+Reveal.initialize({
+  controls:true, progress:true, hash:true, center:true,
+  transition:"slide", width:1100, height:700, margin:0.06,
+});
+
+/* ===== Canvas 粒子：仅当前激活页渲染 ===== */
+(function(){
+  var runningCanvases = {};
+
+  function initParticles(slide){
+    var canvas = slide.querySelector('.particle-canvas');
+    if(!canvas || canvas._inited) return;
+    canvas._inited = true;
+
+    var ctx = canvas.getContext('2d');
+    var animId = null;
+    var W, H, particles = [];
+    var PARTICLE_COUNT = 40;
+
+    function resize(){
+      var rect = slide.getBoundingClientRect();
+      W = canvas.width = rect.width;
+      H = canvas.height = rect.height;
+    }
+    resize();
+
+    for(var i=0;i<PARTICLE_COUNT;i++){
+      particles.push({
+        x:Math.random()*W, y:Math.random()*H,
+        r:Math.random()*2+0.8,
+        vx:(Math.random()-0.5)*0.3,
+        vy:-(Math.random()*0.4+0.15),
+        alpha:Math.random()*0.4+0.1
+      });
+    }
+
+    function draw(){
+      resize();
+      ctx.clearRect(0,0,W,H);
+      for(var i=0;i<PARTICLE_COUNT;i++){
+        var p = particles[i];
+        p.x += p.vx; p.y += p.vy;
+        if(p.x<0) p.x=W; if(p.x>W) p.x=0;
+        if(p.y<0){p.y=H;p.x=Math.random()*W;}
+        if(p.y>H){p.y=0;p.x=Math.random()*W;}
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle = 'rgba(45,90,30,'+p.alpha+')';
+        ctx.fill();
+      }
+      animId = requestAnimationFrame(draw);
+    }
+
+    runningCanvases[canvas] = {
+      start:function(){ if(!animId) draw(); },
+      stop:function(){ if(animId){ cancelAnimationFrame(animId); animId=null; } }
+    };
+  }
+
+  function manageParticles(){
+    var slides = document.querySelectorAll('.particle-slide');
+    for(var i=0;i<slides.length;i++){
+      var canvas = slides[i].querySelector('.particle-canvas');
+      if(!canvas) continue;
+      initParticles(slides[i]);
+      var runner = runningCanvases[canvas];
+      if(!runner) continue;
+      if(slides[i].classList.contains('present')){
+        runner.start();
+      } else {
+        runner.stop();
+      }
+    }
+  }
+
+  Reveal.on('ready', manageParticles);
+  Reveal.on('slidechanged', manageParticles);
+})();
+</script>
 </body>
 </html>

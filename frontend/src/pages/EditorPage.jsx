@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Spin, Button, Typography, App, Select, Space } from 'antd';
-import { ArrowLeftOutlined, DownloadOutlined, SwapOutlined, FileTextOutlined, DeleteOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, DownloadOutlined, SwapOutlined, FileTextOutlined, DeleteOutlined, PrinterOutlined } from '@ant-design/icons';
 import SceneNav from '../components/SceneNav';
 import SceneCard from '../components/SceneCard';
 import AdaptationNotes from '../components/AdaptationNotes';
@@ -13,10 +13,21 @@ import '../styles/script-editor.css';
 
 const { Title, Text } = Typography;
 
-function SceneCanvas() {
+function SceneCanvas({ printAll }) {
   const script = useScriptStore((s) => s.script);
   const selectedSceneId = useScriptStore((s) => s.selectedSceneId);
   const scenes = script?.scenes || [];
+
+  if (printAll && scenes.length > 0) {
+    return (
+      <div className="script-editor__canvas">
+        {scenes.map((scene) => (
+          <SceneCard key={scene.id} scene={scene} />
+        ))}
+      </div>
+    );
+  }
+
   const selectedScene = scenes.find((s) => s.id === selectedSceneId);
 
   if (!selectedScene) {
@@ -131,6 +142,14 @@ export default function EditorPage() {
   const { reset } = useTask();
 
   const [notesPanelOpen, setNotesPanelOpen] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  // 监听打印结束，恢复视图
+  useEffect(() => {
+    const onAfterPrint = () => setIsPrinting(false);
+    window.addEventListener('afterprint', onAfterPrint);
+    return () => window.removeEventListener('afterprint', onAfterPrint);
+  }, []);
 
   // 剧集列表（当 workId 存在时加载）
   const [episodes, setEpisodes] = useState([]);
@@ -191,6 +210,16 @@ export default function EditorPage() {
     } catch (err) {
       message.error('导出失败: ' + (err.response?.data?.error || err.message));
     }
+  };
+
+  const handlePrintPDF = () => {
+    setIsPrinting(true);
+    // 等 DOM 更新完成后再调用打印
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.print();
+      });
+    });
   };
 
   const handleSwitchEpisode = (epId) => {
@@ -280,6 +309,9 @@ export default function EditorPage() {
               <Button icon={<DownloadOutlined />} onClick={handleExport}>
                 导出 YAML
               </Button>
+              <Button icon={<PrinterOutlined />} onClick={handlePrintPDF}>
+                导出 PDF
+              </Button>
               <AdaptationNotesButton
                 notes={script.adaptation_notes || []}
                 onClick={() => setNotesPanelOpen(true)}
@@ -310,7 +342,7 @@ export default function EditorPage() {
             />
           )}
           <SceneNav />
-          <SceneCanvas />
+          <SceneCanvas printAll={isPrinting} />
         </div>
       )}
     </div>
