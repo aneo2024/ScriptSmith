@@ -1,24 +1,41 @@
 # 剧匠 ScriptSmith
 
-将小说文本通过 AI 转换为结构化剧本，支持多格式、多剧集管理、角色小传生成与 YAML 导出。
+面向小说IP改编的 AI 剧本创作工作台 — 从作品管理、剧本生成、角色深化到灵感创作与导出协作。
 
 **项目演示视频**: [B站链接](https://www.bilibili.com/video/BV1yuEh6GE3L/?vd_source=8ac9ee2de57af0dd1bba425929e7f095)
 
+## 产品定位
+
+ScriptSmith 不是一个"小说转剧本生成器"，而是一个围绕小说IP改编流程设计的创作工作台。四个模块围绕作品（Work）协作，而非线性流水线：
+
+```
+  [人物工坊] ——  📦 Work  —— [剧本编辑器]
+                     |
+                [灵感系统]
+                     |
+              [AI 编剧引擎]
+```
+
+- **AI 编剧引擎** — 小说→结构化剧本，7种格式 × 11种风格，异步任务后台执行
+- **剧本编辑器** — 场景导航 + 内容块内联编辑，AI 输出改编备注（改了什么、为什么改）
+- **人物工坊** — 角色档案独立于剧本，结构层自动提取 + 创作层按需深化
+- **灵感系统** — AI 写作辅助 + 话题推荐，突破创作瓶颈
+
 ## 技术栈
 
-| 层级 | 技术 |
-|------|------|
-| 前端 | React 19 + Vite 6 + Ant Design 5 + Zustand + CodeMirror |
-| 后端 | Go 1.25 + Gin + GORM |
-| 数据库 | SQLite（开发） / PostgreSQL 16（生产） |
-| AI | DeepSeek API（OpenAI 兼容，支持自定义 Provider） |
-| 部署 | Docker Compose（PostgreSQL + Go + Nginx） |
+| 层级   | 技术                                             |
+| ------ | ------------------------------------------------ |
+| 前端   | React 19 + Vite 6 + Ant Design 5 + Zustand       |
+| 后端   | Go + Gin + GORM                                  |
+| 数据库 | SQLite（开发） / PostgreSQL（生产）              |
+| AI     | DeepSeek API（OpenAI 兼容，支持自定义 Provider） |
+| 部署   | Docker Compose（PostgreSQL + Go + Nginx）        |
 
 ## 快速开始
 
 ### 环境要求
 
-- Go 1.25+
+- Go 1.23+
 - Node.js 20+
 - Docker & Docker Compose（可选，用于一键部署）
 
@@ -71,11 +88,11 @@ docker compose up -d
 
 启动后访问 `http://localhost`：
 
-| 容器 | 说明 | 端口 |
-|------|------|------|
-| scriptsmith-postgres | PostgreSQL 16 | 5432 |
-| scriptsmith-backend | Go 后端 | 8080 |
-| scriptsmith-nginx | Nginx + 前端静态文件 | 80 |
+| 容器                 | 说明                 | 端口 |
+| -------------------- | -------------------- | ---- |
+| scriptsmith-postgres | PostgreSQL 16        | 5432 |
+| scriptsmith-backend  | Go 后端              | 8080 |
+| scriptsmith-nginx    | Nginx + 前端静态文件 | 80   |
 
 Docker 环境默认使用 PostgreSQL，通过 `docker-compose.yml` 中的 `DB_DSN` 环境变量配置。
 
@@ -100,48 +117,55 @@ go test -cover ./...
 
 ## 功能清单
 
-### 核心功能
-- [x] 用户注册/登录（JWT + Refresh Token 一次性轮换）
-- [x] 小说文本输入与 AI 转换（DeepSeek / 自定义模型）
-- [x] 异步任务进度跟踪（支持离开页面后继续生成）
-- [x] 多格式支持：电影 / 电视剧 / 舞台剧 / 动画 / 短片 / 网剧 / 纪录片
-- [x] 多改编风格：忠实 / 商业 / 实验 / 悬疑 / 武侠 / 仙侠 / 喜剧 / 悲剧等
-
 ### 作品管理
+
 - [x] 作品 CRUD 与统计
 - [x] 多剧集管理（删除后自动重新编号）
-- [x] 作品级角色人设卡
+- [x] 作品级角色人设卡（跨剧集共享，改一次全局同步）
+
+### AI 编排引擎
+
+- [x] 小说文本输入与 AI 转换（DeepSeek / 自定义模型）
+- [x] 异步任务进度跟踪（支持离开页面后继续生成）
+- [x] 7种格式：电影 / 电视剧 / 舞台剧 / 动画 / 短片 / 网剧 / 纪录片
+- [x] 11种风格：忠实 / 商业 / 实验 / 悬疑 / 武侠 / 仙侠 / 喜剧 / 悲剧等
+- [x] AI 强制输出改编备注（改了哪里、怎么改、为什么改）
 
 ### 剧本编辑
-- [x] 结构化剧本编辑器（场景导航 + 内容块增删改）
-- [x] YAML 语法高亮编辑与导出
-- [x] AI 生成剧本摘要、角色外貌、场景环境
 
-### 人物小传
-- [x] 作品级人物小传管理
-- [x] 独立人物小传页面（AI 生成生平传记 + 手动编辑）
-- [x] 支持外貌、性格、背景、生平文章四个维度
+- [x] 结构化编辑器（场景导航 + 内容块增删改）
+- [x] 双击内联编辑，Esc 取消 / Ctrl+Enter 保存
+- [x] YAML 导出（兼容制片软件 + Git 版本控制）
+- [x] AI 辅助：摘要生成、角色外貌生成、场景环境生成
 
-### 灵感创作
+### 人物工坊
+
+- [x] 结构层自动提取：名称、身份、阵营、与主线关系
+- [x] 创作层按需生成：外貌、性格、背景、生平传记（三个独立按钮）
+- [x] 人物小传挂在 Work 层，全剧集共享
+
+### 灵感系统
+
 - [x] 灵感文章浏览与 AI 生成
 - [x] 话题系统与每日推荐
 
-### 系统功能
-- [x] 自定义 AI Provider 管理（多模型配置、连接测试）
-- [x] 管理员面板
+### 系统
+
+- [x] 用户注册/登录（JWT + Refresh Token 一次性轮换）
+- [x] 自定义 AI Provider 管理（多模型配置、连接测试、设为默认）
 
 ## 环境变量
 
-| 变量名 | 必填 | 说明 | 默认值 |
-|--------|------|------|--------|
-| `DEEPSEEK_API_KEY` | 是 | AI API 密钥 | - |
-| `DEEPSEEK_BASE_URL` | 否 | API 基础地址 | `https://api.deepseek.com` |
-| `DEEPSEEK_MODEL` | 否 | 模型名称 | `deepseek-chat` |
-| `DB_TYPE` | 否 | 数据库类型 `sqlite` / `postgres` | `sqlite` |
-| `DB_PATH` | 否 | SQLite 文件路径 | `scriptsmith.db` |
-| `DB_DSN` | 否 | PostgreSQL 连接串 | `postgres://postgres:postgres@localhost:5432/scriptsmith?sslmode=disable` |
-| `PORT` | 否 | 后端端口 | `8080` |
-| `JWT_SECRET` | 是 | JWT 签名密钥 | - |
+| 变量名              | 必填 | 说明                             | 默认值                                                                    |
+| ------------------- | ---- | -------------------------------- | ------------------------------------------------------------------------- |
+| `DEEPSEEK_API_KEY`  | 是   | AI API 密钥                      | -                                                                         |
+| `DEEPSEEK_BASE_URL` | 否   | API 基础地址                     | `https://api.deepseek.com`                                                |
+| `DEEPSEEK_MODEL`    | 否   | 模型名称                         | `deepseek-chat`                                                           |
+| `DB_TYPE`           | 否   | 数据库类型 `sqlite` / `postgres` | `sqlite`                                                                  |
+| `DB_PATH`           | 否   | SQLite 文件路径                  | `scriptsmith.db`                                                          |
+| `DB_DSN`            | 否   | PostgreSQL 连接串                | `postgres://postgres:postgres@localhost:5432/scriptsmith?sslmode=disable` |
+| `PORT`              | 否   | 后端端口                         | `8080`                                                                    |
+| `JWT_SECRET`        | 是   | JWT 签名密钥                     | -                                                                         |
 
 ## 数据存储
 
@@ -202,92 +226,86 @@ ScriptSmith/
 
 ### 认证
 
-| 方法 | 端点 | 说明 |
-|------|------|------|
-| POST | `/auth/register` | 用户注册 |
-| POST | `/auth/login` | 登录获取 token |
-| POST | `/auth/refresh` | 刷新 token |
-| POST | `/auth/logout` | 登出 |
-| GET | `/auth/me` | 获取当前用户信息 |
+| 方法 | 端点             | 说明             |
+| ---- | ---------------- | ---------------- |
+| POST | `/auth/register` | 用户注册         |
+| POST | `/auth/login`    | 登录获取 token   |
+| POST | `/auth/refresh`  | 刷新 token       |
+| POST | `/auth/logout`   | 登出             |
+| GET  | `/auth/me`       | 获取当前用户信息 |
 
 ### 转换任务
 
-| 方法 | 端点 | 说明 |
-|------|------|------|
-| POST | `/convert` | 提交小说转换任务 |
-| GET | `/task/:id` | 查询任务状态 |
-| DELETE | `/task/:id` | 取消任务 |
+| 方法   | 端点        | 说明             |
+| ------ | ----------- | ---------------- |
+| POST   | `/convert`  | 提交小说转换任务 |
+| GET    | `/task/:id` | 查询任务状态     |
+| DELETE | `/task/:id` | 取消任务         |
 
 ### 剧本
 
-| 方法 | 端点 | 说明 |
-|------|------|------|
-| GET | `/scripts/by-task/:taskID` | 按任务 ID 获取剧本 |
-| GET | `/scripts/:id` | 获取剧本详情 |
-| PUT | `/scripts/:id` | 保存剧本 |
-| DELETE | `/scripts/:id` | 删除剧本（自动重编号剩余剧集） |
-| GET | `/scripts/:id/yaml` | 导出 YAML |
-| GET | `/scripts/:id/characters` | 获取角色列表 |
-| GET | `/scripts/:id/scenes` | 获取场景列表 |
-| PUT | `/scripts/:id/scenes/:sid` | 更新场景 |
-| POST | `/scripts/:id/scenes/:sid/contents` | 添加内容块 |
-| DELETE | `/scripts/:id/contents/:cid` | 删除内容块 |
+| 方法   | 端点                                | 说明                           |
+| ------ | ----------------------------------- | ------------------------------ |
+| GET    | `/scripts/by-task/:taskID`          | 按任务 ID 获取剧本             |
+| GET    | `/scripts/:id`                      | 获取剧本详情                   |
+| PUT    | `/scripts/:id`                      | 保存剧本                       |
+| DELETE | `/scripts/:id`                      | 删除剧本（自动重编号剩余剧集） |
+| GET    | `/scripts/:id/yaml`                 | 导出 YAML                      |
+| GET    | `/scripts/:id/characters`           | 获取角色列表                   |
+| GET    | `/scripts/:id/scenes`               | 获取场景列表                   |
+| PUT    | `/scripts/:id/scenes/:sid`          | 更新场景                       |
+| POST   | `/scripts/:id/scenes/:sid/contents` | 添加内容块                     |
+| DELETE | `/scripts/:id/contents/:cid`        | 删除内容块                     |
 
 ### 作品
 
-| 方法 | 端点 | 说明 |
-|------|------|------|
-| POST | `/works` | 创建作品 |
-| GET | `/works` | 作品列表 |
-| GET | `/works/stats` | 统计（作品数 + 总字数） |
-| GET | `/works/count` | 作品数量 |
-| GET | `/works/:id` | 作品详情 |
-| PUT | `/works/:id` | 更新作品 |
-| DELETE | `/works/:id` | 删除作品（级联删除剧本） |
-| GET | `/works/:id/scripts` | 作品下的剧本列表 |
+| 方法   | 端点                 | 说明                     |
+| ------ | -------------------- | ------------------------ |
+| POST   | `/works`             | 创建作品                 |
+| GET    | `/works`             | 作品列表                 |
+| GET    | `/works/stats`       | 统计（作品数 + 总字数）  |
+| GET    | `/works/count`       | 作品数量                 |
+| GET    | `/works/:id`         | 作品详情                 |
+| PUT    | `/works/:id`         | 更新作品                 |
+| DELETE | `/works/:id`         | 删除作品（级联删除剧本） |
+| GET    | `/works/:id/scripts` | 作品下的剧本列表         |
 
 ### 人物小传
 
-| 方法 | 端点 | 说明 |
-|------|------|------|
-| POST | `/works/:id/characters/profiles` | AI 批量生成角色设定 |
+| 方法 | 端点                                     | 说明                |
+| ---- | ---------------------------------------- | ------------------- |
+| POST | `/works/:id/characters/profiles`         | AI 批量生成角色设定 |
 | POST | `/works/:id/characters/:index/biography` | AI 生成单人生平传记 |
-| PUT | `/works/:id/characters/:index` | 更新单个人物小传 |
+| PUT  | `/works/:id/characters/:index`           | 更新单个人物小传    |
 
 ### AI 增强
 
-| 方法 | 端点 | 说明 |
-|------|------|------|
-| POST | `/scripts/:id/summary` | AI 生成剧本摘要 |
+| 方法 | 端点                                 | 说明            |
+| ---- | ------------------------------------ | --------------- |
+| POST | `/scripts/:id/summary`               | AI 生成剧本摘要 |
 | POST | `/scripts/:id/characters/appearance` | AI 生成角色外貌 |
-| POST | `/scripts/:id/scenes/environment` | AI 生成场景环境 |
+| POST | `/scripts/:id/scenes/environment`    | AI 生成场景环境 |
 
 ### 灵感
 
-| 方法 | 端点 | 说明 |
-|------|------|------|
-| GET/POST | `/inspiration/articles` | 文章列表 / 创建 |
-| GET | `/inspiration/articles/:id` | 文章详情 |
-| POST | `/inspiration/articles/:id/like` | 点赞 |
-| POST | `/inspiration/generate` | AI 生成文章 |
-| GET/POST | `/inspiration/topics` | 话题列表 / 创建 |
-| GET | `/inspiration/topics/today` | 今日推荐话题 |
+| 方法     | 端点                             | 说明            |
+| -------- | -------------------------------- | --------------- |
+| GET/POST | `/inspiration/articles`          | 文章列表 / 创建 |
+| GET      | `/inspiration/articles/:id`      | 文章详情        |
+| POST     | `/inspiration/articles/:id/like` | 点赞            |
+| POST     | `/inspiration/generate`          | AI 生成文章     |
+| GET/POST | `/inspiration/topics`            | 话题列表 / 创建 |
+| GET      | `/inspiration/topics/today`      | 今日推荐话题    |
 
 ### AI Provider 管理
 
-| 方法 | 端点 | 说明 |
-|------|------|------|
-| GET/POST | `/ai/providers` | 列表 / 创建 |
-| PUT | `/ai/providers/:id` | 更新 |
-| DELETE | `/ai/providers/:id` | 删除 |
-| PUT | `/ai/providers/:id/default` | 设为默认 |
-| POST | `/ai/providers/:id/test` | 测试连接 |
-
-### 管理
-
-| 方法 | 端点 | 说明 |
-|------|------|------|
-| GET | `/admin/tasks` | 管理员查看所有任务 |
+| 方法     | 端点                        | 说明        |
+| -------- | --------------------------- | ----------- |
+| GET/POST | `/ai/providers`             | 列表 / 创建 |
+| PUT      | `/ai/providers/:id`         | 更新        |
+| DELETE   | `/ai/providers/:id`         | 删除        |
+| PUT      | `/ai/providers/:id/default` | 设为默认    |
+| POST     | `/ai/providers/:id/test`    | 测试连接    |
 
 ## License
 
