@@ -1,49 +1,54 @@
+//React 路由 + 状态
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+//Ant Design 组件
 import {
-  Card,
-  Tabs,
-  Empty,
-  Table,
+  Card,//卡片
+  Tabs,//选项卡
+  Empty,//空状态
+  Table,//表格
   Tag,
-  Typography,
-  Button,
-  Row,
-  Col,
-  Collapse,
-  Spin,
-  Badge,
-  Divider,
-  Dropdown,
-  Select,
-  App,
+  Typography,//文本
+  Button,//按钮
+  Row,//行
+  Col,//列
+  Collapse,//折叠，场景详细
+  Spin,//加载
+  Badge,//标签，显示xx集
+  Divider,//分隔线
+  Dropdown,//下拉菜单
+  Select,//选择框，选择剧集
+  App,//应用
 } from 'antd';
+//Ant Design 图标
 import {
-  ArrowLeftOutlined,
-  UnorderedListOutlined,
-  TeamOutlined,
-  EditOutlined,
-  EnvironmentOutlined,
-  UserOutlined,
-  OrderedListOutlined,
-  PlayCircleOutlined,
-  PlusOutlined,
-  ReadOutlined,
-  BulbOutlined,
-  LoadingOutlined,
-  SkinOutlined,
-  HeatMapOutlined,
+  ArrowLeftOutlined,//返回图标
+  UnorderedListOutlined,//无序列表图标
+  TeamOutlined,//团队图标
+  EditOutlined,//编辑图标
+  EnvironmentOutlined,//环境图标
+  UserOutlined,//用户图标 
+  OrderedListOutlined,//有序列表图标
+  PlayCircleOutlined,//播放图标 
+  PlusOutlined,//添加图标
+  ReadOutlined,//阅读图标
+  BulbOutlined,//灯泡图标
+  LoadingOutlined,//加载图标
+  SkinOutlined,//皮肤图标
+  HeatMapOutlined,//热力图标
 } from '@ant-design/icons';
+//项目工具函数，用来渲染角色表格中的标签和作品格式的标签的颜色
 import { characterTypeLabel, characterTypeColor } from '../utils/parseScript';
 import { FORMATS, getFormatShortLabel, getFormatColor } from '../utils/scriptOptions';
+//后端api
 import {
-  getWork,
-  listWorkScripts,
-  updateWork,
-  generateScriptSummary,
-  generateCharacterAppearances,
-  generateSceneEnvironments,
-  generateCharacterProfiles,
+  getWork,//拿作品详细
+  listWorkScripts,//拿作品所有剧集
+  updateWork,//改作品的tag
+  generateScriptSummary,//生成剧本摘要
+  generateCharacterAppearances,//外貌
+  generateSceneEnvironments,//环境
+  generateCharacterProfiles,//小传
 } from '../services/work';
 
 const { Title, Text, Paragraph } = Typography;
@@ -222,6 +227,12 @@ export default function WorkDetailPage() {
   const [generatingAppearances, setGeneratingAppearances] = useState(new Set());
   const [generatingEnvironments, setGeneratingEnvironments] = useState(new Set());
   const [generatingProfiles, setGeneratingProfiles] = useState(false);
+
+//四个AI生成的handler使用了同样的模式：
+// loading 状态前置 → 调 API → 局部更新 state →
+//  成功/失败提示 → finally 清理 loading。
+// 用 Set 而不是 boolean，因为可能有多个剧集在同时生成，能各自追踪状态。"
+
 
   const handleGenerateProfiles = async () => {
     setGeneratingProfiles(true);
@@ -603,8 +614,8 @@ export default function WorkDetailPage() {
         </Text>
       </div>
 
-      <Card bordered={false}>
-        <Tabs activeKey={activeTab} onChange={setActiveTab} destroyInactiveTabPane items={[
+      <Card variant="borderless">
+        <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
           {
             key: 'summary',
             label: <span><ReadOutlined /> 剧集梗概</span>,

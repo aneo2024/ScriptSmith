@@ -67,7 +67,8 @@ func main() {
 	svc := service.NewScriptService(taskRepo, scriptRepo, workRepo, providerRepo, aiClient)
 	h := handler.NewScriptHandler(svc)
 	authH := handler.NewAuthHandler(userRepo, refreshTokenRepo)
-	workH := handler.NewWorkHandler(workRepo, scriptRepo, taskRepo, providerRepo, aiClient)
+	workSvc := service.NewWorkService(workRepo, scriptRepo, providerRepo, aiClient)
+	workH := handler.NewWorkHandler(workRepo, scriptRepo, taskRepo, providerRepo, aiClient, workSvc)
 	inspirationH := handler.NewInspirationHandler(articleRepo, aiClient)
 	aiProviderH := handler.NewAIProviderHandler(providerRepo, aiClient)
 

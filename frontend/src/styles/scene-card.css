@@ -34,22 +34,14 @@
   background: #e6f7ff;
 }
 
-/* 内容块编辑图标 - 悬停可见 */
+/* 兼容旧的 .content-edit-icon 样式（在 .content-block-actions 容器内排版，不再绝对定位） */
 .content-edit-icon {
-  position: absolute;
-  top: 8px;
-  right: 8px;
   font-size: 13px;
-  color: #bbb;
+  color: #999;
   cursor: pointer;
-  padding: 2px;
+  padding: 3px 4px;
   border-radius: 3px;
-  opacity: 0;
   transition: all 0.2s;
-}
-
-.content-block:hover .content-edit-icon {
-  opacity: 1;
 }
 
 .content-edit-icon:hover {
@@ -274,4 +266,78 @@
 .slugline-dot {
   color: #999;
   font-size: 14px;
+}
+
+/* 内容块右上角操作按钮容器（编辑/删除/添加） */
+.content-block-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 4px;
+  padding: 2px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 2;
+}
+
+.content-block:hover .content-block-actions {
+  opacity: 1;
+}
+
+.content-block.selected .content-block-actions {
+  opacity: 1;
+}
+
+/* 通用操作图标（编辑/添加/删除） */
+.content-action-icon {
+  font-size: 13px;
+  color: #999;
+  cursor: pointer;
+  padding: 3px 4px;
+  border-radius: 3px;
+  transition: all 0.2s;
+}
+
+.content-action-icon.add:hover {
+  color: #52c41a;
+  background: #f6ffed;
+}
+
+.content-action-icon.delete:hover {
+  color: #ff4d4f;
+  background: #fff1f0;
+}
+
+/* 场景末尾的"添加内容块"按钮 */
+.scene-tail-add {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+  margin-bottom: 16px;
+  padding: 16px 0;
+  border-top: 1px dashed #d9d9d9;
+}
+
+.tail-add-btn {
+  background: #fff;
+  border: 1px dashed #d9d9d9;
+  color: #999;
+  font-size: 13px;
+  padding: 8px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tail-add-btn:hover {
+  color: #1890ff;
+  border-color: #1890ff;
+  background: #f0f8ff;
 }

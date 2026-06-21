@@ -6,6 +6,7 @@ import (
 	"scriptsmith/internal/ai"
 	"scriptsmith/internal/model"
 	"scriptsmith/internal/repository"
+	"scriptsmith/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -17,6 +18,7 @@ type WorkHandler struct {
 	taskRepo     *repository.TaskRepository
 	providerRepo *repository.AIProviderRepository
 	aiClient     *ai.Client
+	svc          *service.WorkService
 }
 
 func NewWorkHandler(
@@ -25,6 +27,7 @@ func NewWorkHandler(
 	taskRepo *repository.TaskRepository,
 	providerRepo *repository.AIProviderRepository,
 	aiClient *ai.Client,
+	svc *service.WorkService,
 ) *WorkHandler {
 	return &WorkHandler{
 		workRepo:     workRepo,
@@ -32,6 +35,7 @@ func NewWorkHandler(
 		taskRepo:     taskRepo,
 		providerRepo: providerRepo,
 		aiClient:     aiClient,
+		svc:          svc,
 	}
 }
 

@@ -153,6 +153,12 @@ export const updateContent = (scriptId, contentId, data) =>
 export const updateScene = (scriptId, sceneId, data) =>
   api.put(`/scripts/${scriptId}/scenes/${sceneId}`, data).then((r) => r.data);
 
+export const addContent = (scriptId, sceneId, data) =>
+  api.post(`/scripts/${scriptId}/scenes/${sceneId}/contents`, data).then((r) => r.data);
+
+export const deleteContent = (scriptId, contentId) =>
+  api.delete(`/scripts/${scriptId}/contents/${contentId}`).then((r) => r.data);
+
 // ============ AI Provider 管理 ============
 
 export const listProviders = () =>

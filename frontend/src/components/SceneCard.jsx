@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { App } from 'antd';
+import { App, Dropdown, Modal } from 'antd';
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import useScriptStore from '../store/scriptStore';
-import { updateContent, updateScene as updateSceneAPI } from '../services/api';
+import { updateContent, updateScene as updateSceneAPI, addContent as addContentAPI, deleteContent as deleteContentAPI } from '../services/api';
 import { EditOutlined } from '@ant-design/icons';
 import '../styles/scene-card.css';
 
@@ -171,21 +172,50 @@ function SluglineEdit({ slugline, onSave, onCancel }) {
 }
 
 /** 只读内容块 */
-function ContentBlockRead({ item, isSelected, onClick, onDoubleClick }) {
+function ContentBlockRead({ item, isSelected, onClick, onDoubleClick, onAdd, onDelete }) {
   return (
     <div
       className={`content-block ${item.type} ${isSelected ? 'selected' : ''}`}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
     >
-      <EditOutlined
-        className="content-edit-icon"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDoubleClick();
-        }}
-        title="编辑此内容"
-      />
+      <div className="content-block-actions">
+        <Dropdown
+          menu={{
+            items: [
+              { key: 'action', label: '新增动作描述' },
+              { key: 'dialogue', label: '新增对白' },
+              { key: 'transition', label: '新增转场' },
+              { key: 'sound', label: '新增音效' },
+            ],
+            onClick: ({ key }) => onAdd?.(key),
+          }}
+          trigger={['click']}
+          placement="topLeft"
+        >
+          <PlusOutlined
+            className="content-action-icon add"
+            onClick={(e) => e.stopPropagation()}
+            title="在下方新增内容块"
+          />
+        </Dropdown>
+        <DeleteOutlined
+          className="content-action-icon delete"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete?.();
+          }}
+          title="删除此内容块"
+        />
+        <EditOutlined
+          className="content-edit-icon"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDoubleClick();
+          }}
+          title="编辑此内容"
+        />
+      </div>
       {item.type === 'action' && (
         <div className="action-text">{item.description}</div>
       )}
@@ -215,7 +245,7 @@ function ContentBlockRead({ item, isSelected, onClick, onDoubleClick }) {
 }
 
 const SceneCard = ({ scene: sceneProp }) => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const selectedContentId = useScriptStore((s) => s.selectedContentId);
   const selectContent = useScriptStore((s) => s.selectContent);
   const updateStoreScene = useScriptStore((s) => s.updateScene);
@@ -297,6 +327,85 @@ const SceneCard = ({ scene: sceneProp }) => {
     setEditingSlugline(false);
   }, []);
 
+  // 在指定内容块之后新增一个内容块
+  const handleAddContent = useCallback(async (afterContentId, contentType) => {
+    const scriptId = useScriptStore.getState().script?.id;
+    if (!scriptId) return;
+
+    // 根据类型构造空白内容块模板
+    const newContent = {
+      type: contentType,
+      _tempId: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    };
+    if (contentType === 'action') {
+      newContent.description = '';
+    } else if (contentType === 'dialogue') {
+      newContent.character_name = '';
+      newContent.parenthetical = '';
+      newContent.text = '';
+    } else if (contentType === 'transition') {
+      newContent.transition_type = 'CUT TO:';
+    } else if (contentType === 'sound') {
+      newContent.sound_type = 'SFX';
+      newContent.sound_description = '';
+    }
+
+    // 乐观更新：在 afterContentId 之后插入新块
+    const currentScene = useScriptStore.getState().script?.scenes?.find((s) => s.id === sceneProp.id);
+    const currentContent = currentScene?.content || [];
+    const afterIdx = afterContentId
+      ? currentContent.findIndex((c) => c.id === afterContentId)
+      : currentContent.length - 1;
+    const insertIdx = afterIdx >= 0 ? afterIdx + 1 : currentContent.length;
+    const reordered = [
+      ...currentContent.slice(0, insertIdx),
+      newContent,
+      ...currentContent.slice(insertIdx),
+    ];
+    useScriptStore.getState().updateScene(sceneProp.id, { content: reordered });
+
+    try {
+      // 不传 id，让后端生成
+      const created = await addContentAPI(scriptId, sceneProp.id, newContent);
+      // 用后端返回的正式内容块替换临时块（保留位置）
+      useScriptStore.getState().updateScene(sceneProp.id, {
+        content: reordered.map((c) => (c === newContent ? created : c)),
+      });
+      message.success('已新增内容块');
+    } catch (err) {
+      message.error('新增内容块失败，请检查网络');
+      // 回滚：移除临时块
+      useScriptStore.getState().updateScene(sceneProp.id, { content: currentContent });
+    }
+  }, [sceneProp.id, message]);
+
+  // 删除内容块（带确认）
+  const handleDeleteContent = useCallback((contentId) => {
+    const scriptId = useScriptStore.getState().script?.id;
+    if (!scriptId) return;
+
+    modal.confirm({
+      title: '确认删除',
+      content: '删除后无法恢复，确定要删除这个内容块吗？',
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        // 乐观删除
+        useScriptStore.getState().deleteContent(sceneProp.id, contentId);
+        try {
+          await deleteContentAPI(scriptId, contentId);
+          message.success('已删除内容块');
+        } catch (err) {
+          message.error('删除内容块失败，请检查网络');
+          // 回滚：重新拉取脚本
+          const { loadScript } = useScriptStore.getState();
+          loadScript(scriptId);
+        }
+      },
+    });
+  }, [sceneProp.id, message, modal]);
+
   return (
     <div className="scene-card selected">
       <div className="scene-header">
@@ -350,23 +459,47 @@ const SceneCard = ({ scene: sceneProp }) => {
 
       <div className="scene-content">
         {sceneProp.content?.map((item) => (
-          editingContentId === item.id ? (
+          editingContentId === (item.id || item._tempId) ? (
             <ContentEdit
-              key={item.id}
+              key={item.id || item._tempId}
               item={item}
               onSave={handleContentSave}
               onCancel={handleContentCancel}
             />
           ) : (
             <ContentBlockRead
-              key={item.id}
+              key={item.id || item._tempId}
               item={item}
               isSelected={selectedContentId === item.id}
               onClick={() => handleContentClick(item.id)}
               onDoubleClick={() => handleContentDoubleClick(item.id)}
+              onAdd={(type) => handleAddContent(item.id, type)}
+              onDelete={() => handleDeleteContent(item.id)}
             />
           )
         ))}
+        {/* 场景末尾添加按钮 */}
+        <div className="scene-tail-add">
+          <Dropdown
+            menu={{
+              items: [
+                { key: 'action', label: '新增动作描述' },
+                { key: 'dialogue', label: '新增对白' },
+                { key: 'transition', label: '新增转场' },
+                { key: 'sound', label: '新增音效' },
+              ],
+              onClick: ({ key }) => {
+                const lastId = sceneProp.content?.[sceneProp.content.length - 1]?.id;
+                handleAddContent(lastId, key);
+              },
+            }}
+            trigger={['click']}
+          >
+            <button className="tail-add-btn">
+              <PlusOutlined /> 在末尾添加内容块
+            </button>
+          </Dropdown>
+        </div>
       </div>
     </div>
   );

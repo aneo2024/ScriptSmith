@@ -80,6 +80,40 @@ const useScriptStore = create((set, get) => ({
       };
     });
   },
+
+  // 乐观新增内容块：临时 ID 用于 UI 渲染，API 返回后会被真实 ID 替换
+  addContent: (sceneID, content) => {
+    set((state) => {
+      if (!state.script?.scenes) return state;
+      return {
+        script: {
+          ...state.script,
+          scenes: state.script.scenes.map((s) =>
+            s.id === sceneID
+              ? { ...s, content: [...(s.content || []), content] }
+              : s
+          ),
+        },
+      };
+    });
+  },
+
+  // 乐观删除内容块
+  deleteContent: (sceneID, contentID) => {
+    set((state) => {
+      if (!state.script?.scenes) return state;
+      return {
+        script: {
+          ...state.script,
+          scenes: state.script.scenes.map((s) =>
+            s.id === sceneID
+              ? { ...s, content: (s.content || []).filter((c) => c.id !== contentID) }
+              : s
+          ),
+        },
+      };
+    });
+  },
 }));
 
 export default useScriptStore;
